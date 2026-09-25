@@ -50,10 +50,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    verificationStatus: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
+      verificationStatus: {
+        type: String,
+        enum: ['not_submitted', 'pending', 'approved', 'rejected'],
+        default: function verificationStatusDefault() {
+          return this.role === 'partner' ? 'not_submitted' : undefined;
+        },
     },
     passwordChangedAt: {
       type: Date,

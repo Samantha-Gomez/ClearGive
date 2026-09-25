@@ -39,7 +39,7 @@ const registerUser = async (req, res, next) => {
       organizationName: role === 'partner' ? organizationName : undefined,
       organizationType: role === 'partner' ? organizationType : undefined,
       status: 'active',
-      verificationStatus: role === 'partner' ? 'pending' : undefined,
+      verificationStatus: role === 'partner' ? 'not_submitted' : undefined,
     });
 
     await logActivity({

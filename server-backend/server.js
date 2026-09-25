@@ -6,6 +6,10 @@ require('dotenv').config();
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const protectedRoutes = require('./routes/protectedRoutes');
+const partnerVerificationRoutes = require('./routes/partnerVerificationRoutes');
+const adminPartnerVerificationRoutes = require('./routes/adminPartnerVerificationRoutes');
+const donationDriveRoutes = require('./routes/donationDriveRoutes');
+const partnerDriveRoutes = require('./routes/partnerDriveRoutes');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
@@ -33,6 +37,10 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/protected', protectedRoutes);
+app.use('/api/partner-verification', partnerVerificationRoutes);
+app.use('/api/admin/partner-verifications', adminPartnerVerificationRoutes);
+app.use('/api/drives', donationDriveRoutes);
+app.use('/api/partner/drives', partnerDriveRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
