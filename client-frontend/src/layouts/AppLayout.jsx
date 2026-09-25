@@ -1,4 +1,4 @@
-import { HeartHandshake, LayoutDashboard, LogOut, ShieldCheck, Store, Truck } from 'lucide-react'
+import { HeartHandshake, LayoutDashboard, LogOut, Settings, ShieldCheck, Store, Truck } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { roleLabels } from '../routes/routeUtils'
@@ -7,16 +7,19 @@ const navigation = {
   donor: [
     { label: 'Dashboard', to: '/donor', icon: LayoutDashboard },
     { label: 'Donation Drives', to: '/donor/drives', icon: HeartHandshake },
+    { label: 'Settings', to: '/donor/settings', icon: Settings },
   ],
   partner: [
     { label: 'Dashboard', to: '/partner', icon: LayoutDashboard },
     { label: 'My Drives', to: '/partner/drives', icon: Store },
     { label: 'Verification', to: '/partner/verification', icon: ShieldCheck },
+    { label: 'Settings', to: '/partner/settings', icon: Settings },
   ],
   admin: [
     { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
-    { label: 'Partner Verification', to: '/admin/verification', icon: ShieldCheck },
+    { label: 'Partner Verification', to: '/admin/verifications', icon: ShieldCheck },
     { label: 'Donation Drives', to: '/admin/drives', icon: Truck },
+    { label: 'Settings', to: '/admin/settings', icon: Settings },
   ],
 }
 
