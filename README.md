@@ -1,36 +1,56 @@
 # ClearGive
 
-A Web-Based Donation and Community Assistance Management System.
+**A Web-Based Donation and Community Assistance Management System**
 
-ClearGive is a school project designed to help organize donation drives, assistance requests, partner organizations, donors, and distribution records in one system.
+ClearGive is a web-based system that helps manage donation drives and community assistance activities in **Dagupan City**.
 
-## Project Stack
+## Features
 
-### Frontend
-- React
-- Vite
-- CSS
-- React Router
-- Lucide React
+- User registration and login
+- Donor, Partner, and Admin roles
+- Partner organization verification
+- Donation drive management
+- Registered donor search and donation recording
+- Donation and distribution tracking
+- Beneficiary tracking
+- Document and proof uploads
+- Activity logs
+- Reports and analytics
 
-### Backend
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
+## Technology Used
+
+- **Frontend:** React + Vite
+- **Backend:** Node.js + Express
+- **Database:** MongoDB + Mongoose
+- **Authentication:** JWT + bcrypt
+- **Analytics:** Python + Apache Spark/PySpark
 
 ## Project Structure
 
+```text
 ClearGive/
-/client-frontend
-/server-backend
-/README.md
-/.gitignore
+├── client-frontend/
+├── server-backend/
+├── .gitignore
+└── README.md
+```
 
-## Setup
+## How to Run
 
-### 1. Clone the repository
+### Backend
 
-```powershell
-git clone https://github.com/Samantha-Gomez/ClearGive.git
-cd ClearGive
+```bash
+cd server-backend
+npm install
+npm run dev
+```
+
+### Frontend
+
+Open another terminal:
+
+```bash
+cd client-frontend
+npm install
+npm run dev
+```
