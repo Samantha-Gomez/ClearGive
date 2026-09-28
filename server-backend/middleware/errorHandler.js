@@ -7,10 +7,16 @@ const notFoundHandler = (req, res, next) => {
 const errorHandler = (error, req, res, next) => {
   const statusCode = error.statusCode || 500;
 
-  // Keep response messages safe for users and do not expose internal system details.
-  const message = statusCode === 500
-    ? 'Something went wrong. Please try again later.'
-    : error.message;
+  // Log unexpected server errors internally for debugging.
+  if (statusCode >= 500) {
+    console.error('Server error:', error);
+  }
+
+  // Never expose internal server details to clients.
+  const message =
+    statusCode === 500
+      ? 'Something went wrong. Please try again later.'
+      : error.message || 'Request failed.';
 
   res.status(statusCode).json({
     message,

@@ -80,13 +80,32 @@ export default function PartnerVerificationPage() {
     loadVerification()
   }, [])
 
-  function updateField(event) {
-    setForm({ ...form, [event.target.name]: event.target.value })
-  }
+    function updateField(event) {
+      const { name, value } = event.target
 
-  function updateDocument(field, property, value) {
-    setForm({ ...form, [field]: { ...form[field], [property]: value } })
-  }
+      setForm((current) => ({
+        ...current,
+        [name]: value,
+      }))
+
+      if (error) {
+        setError('')
+      }
+    }
+
+    function updateDocument(field, property, value) {
+      setForm((current) => ({
+        ...current,
+        [field]: {
+          ...current[field],
+          [property]: value,
+        },
+      }))
+
+      if (error) {
+        setError('')
+      }
+    }
 
   async function handleSubmit(event) {
     event.preventDefault()

@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:15228/ClearGiveDB';
+  const mongoUri = process.env.MONGO_URI;
+
+  if (!mongoUri) {
+    console.error('MONGO_URI is not configured.');
+    process.exit(1);
+  }
 
   try {
     await mongoose.connect(mongoUri);

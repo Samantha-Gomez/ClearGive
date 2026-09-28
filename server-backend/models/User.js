@@ -16,7 +16,10 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email.'],
+      match: [
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        'Please provide a valid email.',
+      ],
     },
     contactNumber: {
       type: String,
@@ -50,12 +53,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-      verificationStatus: {
-        type: String,
-        enum: ['not_submitted', 'pending', 'approved', 'rejected'],
-        default: function verificationStatusDefault() {
-          return this.role === 'partner' ? 'not_submitted' : undefined;
-        },
+    verificationStatus: {
+      type: String,
+      enum: ['not_submitted', 'pending', 'approved', 'rejected'],
+      default: function verificationStatusDefault() {
+        return this.role === 'partner' ? 'not_submitted' : undefined;
+      },
     },
     passwordChangedAt: {
       type: Date,
@@ -68,7 +71,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 userSchema.pre('save', async function hashPassword() {
@@ -80,7 +83,9 @@ userSchema.pre('save', async function hashPassword() {
   this.passwordChangedAt = new Date();
 });
 
-userSchema.methods.comparePassword = function comparePassword(candidatePassword) {
+userSchema.methods.comparePassword = function comparePassword(
+  candidatePassword,
+) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 

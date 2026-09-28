@@ -9,13 +9,25 @@ const donationSchema = new mongoose.Schema(
       index: true,
       immutable: true,
     },
+
+    // Optional because physical donors do not need a ClearGive account.
     donorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
       index: true,
       immutable: true,
     },
+
+    // Name recorded by the partner for a physical contributor.
+    contributorName: {
+      type: String,
+      default: 'Anonymous Donor',
+      trim: true,
+      minlength: 2,
+      maxlength: 150,
+    },
+
     item: {
       type: String,
       required: true,
@@ -23,6 +35,7 @@ const donationSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 150,
     },
+
     quantity: {
       type: Number,
       required: true,
@@ -33,29 +46,35 @@ const donationSchema = new mongoose.Schema(
         message: 'quantity must be a positive integer.',
       },
     },
+
     status: {
       type: String,
       enum: ['Recorded', 'Received', 'Distributed'],
       default: 'Recorded',
     },
+
     recordedAt: {
       type: Date,
       default: Date.now,
       immutable: true,
     },
+
     receivedAt: {
       type: Date,
       default: null,
     },
+
     receivedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       default: null,
     },
+
     distributedAt: {
       type: Date,
       default: null,
     },
+
     distributedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -64,7 +83,7 @@ const donationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model('Donation', donationSchema);

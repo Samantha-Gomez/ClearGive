@@ -1,20 +1,28 @@
-const express = require('express');
+
+const express = require('express')
+
 const {
   listPublicActiveDrives,
   getPublicActiveDrive,
-} = require('../controllers/donationDriveController');
-const { recordDonation } = require('../controllers/donationController');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
+} = require('../controllers/donationDriveController')
+
 const {
   validateObjectId,
   validatePublicDriveQuery,
-  validateDonationCreation,
-} = require('../middleware/validation');
+} = require('../middleware/validation')
 
-const router = express.Router();
+const router = express.Router()
 
-router.get('/', validatePublicDriveQuery, listPublicActiveDrives);
-router.get('/:id', validateObjectId, getPublicActiveDrive);
-router.post('/:driveId/donations', authenticate, authorize('donor'), validateDonationCreation, recordDonation);
+router.get(
+  '/',
+  validatePublicDriveQuery,
+  listPublicActiveDrives,
+)
 
-module.exports = router;
+router.get(
+  '/:id',
+  validateObjectId,
+  getPublicActiveDrive,
+)
+
+module.exports = router

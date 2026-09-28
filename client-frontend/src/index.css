@@ -4,11 +4,18 @@
   --paper: #f6faf7;
   --surface: #ffffff;
   --line: #dfe9e2;
+
   --green: #2f8f58;
   --green-dark: #247044;
   --green-soft: #e9f6ed;
   --green-wash: #f3faf5;
+
   --danger: #b64d49;
+  --danger-soft: #fff0ee;
+
+  --input-bg: #fcfefd;
+  --input-border: #cad9ce;
+
   font-family: Nunito, 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -17,9 +24,45 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html.dark {
+  --ink: #e8f0eb;
+  --muted: #9eada5;
+  --paper: #111714;
+  --surface: #19211d;
+  --line: #2d3933;
+
+  --green: #4caf70;
+  --green-dark: #69c58a;
+  --green-soft: #203a2a;
+  --green-wash: #17261e;
+
+  --danger: #e47771;
+  --danger-soft: #3a2422;
+
+  --input-bg: #121a16;
+  --input-border: #3a4941;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: var(--paper);
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--paper);
+  color: var(--ink);
 }
 
 #root {

@@ -38,9 +38,18 @@ export default function RegisterPage() {
 
   return (
     <main className="auth-page">
-      <section className="auth-card register-card">
-        <Link className="back-link" to="/login"><ArrowLeft size={16} /> Back to sign in</Link>
-        <div className="auth-brand"><span className="brand-mark"><HeartHandshake size={22} /></span> ClearGive</div>
+    <section className="auth-card register-card">
+    <Link className="back-link" to="/login">
+      <ArrowLeft size={16} /> Back to sign in
+    </Link>
+
+    <div className="auth-brand">
+      <span className="brand-mark">
+        <HeartHandshake size={22} />
+      </span>
+      ClearGive
+    </div>
+    
         <p className="eyebrow">Join the network</p>
         <h1>Create your account.</h1>
         <p className="muted">Choose how you will take part in community support.</p>
