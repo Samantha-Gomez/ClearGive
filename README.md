@@ -22,10 +22,10 @@ ClearGive is a school project designed to help organize donation drives, assista
 ## Project Structure
 
 ClearGive/
-├── client-frontend/
-├── server-backend/
-├── README.md
-└── .gitignore
+/client-frontend
+/server-backend
+/README.md
+/.gitignore
 
 ## Setup
 
