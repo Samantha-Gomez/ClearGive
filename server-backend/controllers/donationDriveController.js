@@ -42,7 +42,9 @@ const isValidObjectId = (value) =>
   mongoose.Types.ObjectId.isValid(value);
 
 const ensureBodyObject = (body) =>
-  body && typeof body === 'object' && !Array.isArray(body);
+  body &&
+  typeof body === 'object' &&
+  !Array.isArray(body);
 
 const validateEditableBody = (
   body,
@@ -53,8 +55,12 @@ const validateEditableBody = (
     return 'A request body is required.';
   }
 
-  const protectedField = protectedFields.find((field) =>
-    Object.prototype.hasOwnProperty.call(body, field),
+  const protectedField = protectedFields.find(
+    (field) =>
+      Object.prototype.hasOwnProperty.call(
+        body,
+        field,
+      ),
   );
 
   if (protectedField) {
@@ -74,7 +80,8 @@ const validateEditableBody = (
 
 const serializeDrive = (drive) => {
   const populatedPartner =
-    drive.partnerId && drive.partnerId._id
+    drive.partnerId &&
+    drive.partnerId._id
       ? drive.partnerId
       : null;
 
@@ -88,7 +95,8 @@ const serializeDrive = (drive) => {
       ? {
           id: populatedPartner._id,
           fullName: populatedPartner.fullName,
-          organizationName: populatedPartner.organizationName,
+          organizationName:
+            populatedPartner.organizationName,
         }
       : undefined,
 
@@ -114,15 +122,19 @@ const createDrive = async (req, res, next) => {
     );
 
     if (bodyError) {
-      return res.status(400).json({ message: bodyError });
+      return res.status(400).json({
+        message: bodyError,
+      });
     }
 
     const drive = await DonationDrive.create({
       ...Object.fromEntries(
-        editableDriveFields.map((field) => [
-          field,
-          req.body[field],
-        ]),
+        editableDriveFields.map(
+          (field) => [
+            field,
+            req.body[field],
+          ],
+        ),
       ),
       partnerId: req.user._id,
       status: 'active',
@@ -155,7 +167,8 @@ const createDrive = async (req, res, next) => {
     );
 
     return res.status(201).json({
-      message: 'Donation drive created successfully.',
+      message:
+        'Donation drive created successfully.',
       drive: serializeDrive(drive),
     });
   } catch (error) {
@@ -177,11 +190,78 @@ const listOwnDrives = async (req, res, next) => {
   }
 };
 
+/* =========================
+   DRIVE STATISTICS
+========================= */
+
+const addDriveStats = async (drive) => {
+  const donations = await Donation.find({
+    driveId: drive._id,
+  }).select('quantity status');
+
+  const distributions = await Distribution.find({
+    driveId: drive._id,
+  }).select(
+    'quantityDistributed beneficiariesAssisted',
+  );
+
+  const totalDonated = donations.reduce(
+    (sum, donation) =>
+      sum +
+      Number(donation.quantity || 0),
+    0,
+  );
+
+  const totalReceived = donations
+    .filter(
+      (donation) =>
+        donation.status === 'Received' ||
+        donation.status === 'Distributed',
+    )
+    .reduce(
+      (sum, donation) =>
+        sum +
+        Number(donation.quantity || 0),
+      0,
+    );
+
+  const totalDistributed =
+    distributions.reduce(
+      (sum, distribution) =>
+        sum +
+        Number(
+          distribution.quantityDistributed ||
+            0,
+        ),
+      0,
+    );
+
+  const beneficiariesAssisted =
+    distributions.reduce(
+      (sum, distribution) =>
+        sum +
+        Number(
+          distribution.beneficiariesAssisted ||
+            0,
+        ),
+      0,
+    );
+
+  return {
+    totalDonations: donations.length,
+    totalDonated,
+    totalReceived,
+    totalDistributed,
+    beneficiariesAssisted,
+  };
+};
+
 const getOwnDrive = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
-        message: 'Invalid donation drive ID format.',
+        message:
+          'Invalid donation drive ID format.',
       });
     }
 
@@ -192,12 +272,18 @@ const getOwnDrive = async (req, res, next) => {
 
     if (!drive) {
       return res.status(404).json({
-        message: 'Donation drive not found.',
+        message:
+          'Donation drive not found.',
       });
     }
 
+    const stats = await addDriveStats(drive);
+
     return res.json({
-      drive: serializeDrive(drive),
+      drive: {
+        ...serializeDrive(drive),
+        stats,
+      },
     });
   } catch (error) {
     return next(error);
@@ -208,7 +294,8 @@ const updateOwnDrive = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
-        message: 'Invalid donation drive ID format.',
+        message:
+          'Invalid donation drive ID format.',
       });
     }
 
@@ -219,36 +306,47 @@ const updateOwnDrive = async (req, res, next) => {
     );
 
     if (bodyError) {
-      return res.status(400).json({ message: bodyError });
+      return res.status(400).json({
+        message: bodyError,
+      });
     }
 
     if (Object.keys(req.body).length === 0) {
       return res.status(400).json({
-        message: 'At least one drive field must be provided.',
+        message:
+          'At least one drive field must be provided.',
       });
     }
 
     const updates = Object.fromEntries(
       editableDriveFields
-        .filter((field) => req.body[field] !== undefined)
-        .map((field) => [field, req.body[field]]),
+        .filter(
+          (field) =>
+            req.body[field] !== undefined,
+        )
+        .map((field) => [
+          field,
+          req.body[field],
+        ]),
     );
 
-    const drive = await DonationDrive.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        partnerId: req.user._id,
-      },
-      { $set: updates },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
+    const drive =
+      await DonationDrive.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          partnerId: req.user._id,
+        },
+        { $set: updates },
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
 
     if (!drive) {
       return res.status(404).json({
-        message: 'Donation drive not found.',
+        message:
+          'Donation drive not found.',
       });
     }
 
@@ -262,7 +360,8 @@ const updateOwnDrive = async (req, res, next) => {
     });
 
     return res.json({
-      message: 'Donation drive updated successfully.',
+      message:
+        'Donation drive updated successfully.',
       drive: serializeDrive(drive),
     });
   } catch (error) {
@@ -274,23 +373,32 @@ const updateDriveStatus = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
-        message: 'Invalid donation drive ID format.',
+        message:
+          'Invalid donation drive ID format.',
       });
     }
 
     const bodyError = validateEditableBody(
       req.body,
       ['status'],
-      ['partnerId', 'createdAt', 'updatedAt'],
+      [
+        'partnerId',
+        'createdAt',
+        'updatedAt',
+      ],
     );
 
     if (bodyError) {
-      return res.status(400).json({ message: bodyError });
+      return res.status(400).json({
+        message: bodyError,
+      });
     }
 
     if (
       typeof req.body.status !== 'string' ||
-      !driveStatuses.includes(req.body.status)
+      !driveStatuses.includes(
+        req.body.status,
+      )
     ) {
       return res.status(400).json({
         message: 'status is invalid.',
@@ -304,14 +412,15 @@ const updateDriveStatus = async (req, res, next) => {
 
     if (!drive) {
       return res.status(404).json({
-        message: 'Donation drive not found.',
+        message:
+          'Donation drive not found.',
       });
     }
 
     if (
-      !driveStatusTransitions[drive.status].includes(
-        req.body.status,
-      )
+      !driveStatusTransitions[
+        drive.status
+      ].includes(req.body.status)
     ) {
       return res.status(409).json({
         message: `Cannot change drive status from ${drive.status} to ${req.body.status}.`,
@@ -321,12 +430,14 @@ const updateDriveStatus = async (req, res, next) => {
     const previousStatus = drive.status;
 
     drive.status = req.body.status;
+
     await drive.save();
 
     await logActivity({
       user: req.user._id,
       role: req.user.role,
-      action: 'donation_drive_status_changed',
+      action:
+        'donation_drive_status_changed',
       resourceType: 'DonationDrive',
       resourceId: drive._id.toString(),
       details: `Drive status changed from ${previousStatus} to ${drive.status}.`,
@@ -334,7 +445,8 @@ const updateDriveStatus = async (req, res, next) => {
     });
 
     return res.json({
-      message: 'Donation drive status updated successfully.',
+      message:
+        'Donation drive status updated successfully.',
       drive: serializeDrive(drive),
     });
   } catch (error) {
@@ -342,7 +454,9 @@ const updateDriveStatus = async (req, res, next) => {
   }
 };
 
-const buildPublicDriveFilter = async (query) => {
+const buildPublicDriveFilter = async (
+  query,
+) => {
   const filter = {
     status: 'active',
   };
@@ -364,13 +478,16 @@ const buildPublicDriveFilter = async (query) => {
       $options: 'i',
     };
 
-    const matchingPartners = await User.find({
-      role: 'partner',
-      $or: [
-        { fullName: search },
-        { organizationName: search },
-      ],
-    }).select('_id');
+    const matchingPartners =
+      await User.find({
+        role: 'partner',
+        $or: [
+          { fullName: search },
+          {
+            organizationName: search,
+          },
+        ],
+      }).select('_id');
 
     filter.$or = [
       { title: search },
@@ -393,14 +510,17 @@ const buildPublicDriveFilter = async (query) => {
    PUBLIC DRIVE STATISTICS
 ========================= */
 
-const addPublicDriveStats = async (drive) => {
+const addPublicDriveStats = async (
+  drive,
+) => {
   const donations = await Donation.find({
     driveId: drive._id,
   }).select('quantity status');
 
   const totalDonated = donations.reduce(
     (sum, donation) =>
-      sum + Number(donation.quantity || 0),
+      sum +
+      Number(donation.quantity || 0),
     0,
   );
 
@@ -412,7 +532,8 @@ const addPublicDriveStats = async (drive) => {
     )
     .reduce(
       (sum, donation) =>
-        sum + Number(donation.quantity || 0),
+        sum +
+        Number(donation.quantity || 0),
       0,
     );
 
@@ -422,9 +543,12 @@ const addPublicDriveStats = async (drive) => {
   };
 };
 
-const serializePublicDrive = async (drive) => {
+const serializePublicDrive = async (
+  drive,
+) => {
   const serialized = serializeDrive(drive);
-  const stats = await addPublicDriveStats(drive);
+  const stats =
+    await addPublicDriveStats(drive);
 
   return {
     ...serialized,
@@ -432,22 +556,31 @@ const serializePublicDrive = async (drive) => {
   };
 };
 
-const listPublicActiveDrives = async (req, res, next) => {
+const listPublicActiveDrives = async (
+  req,
+  res,
+  next,
+) => {
   try {
-    const filter = await buildPublicDriveFilter(
-      req.query || {},
-    );
+    const filter =
+      await buildPublicDriveFilter(
+        req.query || {},
+      );
 
-    const drives = await DonationDrive.find(filter)
-      .populate(
-        'partnerId',
-        'fullName organizationName',
-      )
-      .sort({ createdAt: -1 });
+    const drives =
+      await DonationDrive.find(filter)
+        .populate(
+          'partnerId',
+          'fullName organizationName',
+        )
+        .sort({ createdAt: -1 });
 
-    const serializedDrives = await Promise.all(
-      drives.map(serializePublicDrive),
-    );
+    const serializedDrives =
+      await Promise.all(
+        drives.map(
+          serializePublicDrive,
+        ),
+      );
 
     return res.json({
       drives: serializedDrives,
@@ -457,30 +590,40 @@ const listPublicActiveDrives = async (req, res, next) => {
   }
 };
 
-const getPublicActiveDrive = async (req, res, next) => {
+const getPublicActiveDrive = async (
+  req,
+  res,
+  next,
+) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
-        message: 'Invalid donation drive ID format.',
+        message:
+          'Invalid donation drive ID format.',
       });
     }
 
-    const drive = await DonationDrive.findOne({
-      _id: req.params.id,
-      status: 'active',
-    }).populate(
-      'partnerId',
-      'fullName organizationName',
-    );
+    const drive =
+      await DonationDrive.findOne({
+        _id: req.params.id,
+        status: 'active',
+      }).populate(
+        'partnerId',
+        'fullName organizationName',
+      );
 
     if (!drive) {
       return res.status(404).json({
-        message: 'Active donation drive not found.',
+        message:
+          'Active donation drive not found.',
       });
     }
 
     return res.json({
-      drive: await serializePublicDrive(drive),
+      drive:
+        await serializePublicDrive(
+          drive,
+        ),
     });
   } catch (error) {
     return next(error);
@@ -491,22 +634,26 @@ const getPublicActiveDrive = async (req, res, next) => {
    ADMIN DRIVE FUNCTIONS
 ========================= */
 
-const addAdminDriveStats = async (drive) => {
+const addAdminDriveStats = async (
+  drive,
+) => {
   const driveId = drive._id;
 
   const donations = await Donation.find({
     driveId,
   }).select('quantity status');
 
-  const distributions = await Distribution.find({
-    driveId,
-  }).select(
-    'quantityDistributed beneficiariesAssisted',
-  );
+  const distributions =
+    await Distribution.find({
+      driveId,
+    }).select(
+      'quantityDistributed beneficiariesAssisted',
+    );
 
   const totalDonated = donations.reduce(
     (sum, donation) =>
-      sum + Number(donation.quantity || 0),
+      sum +
+      Number(donation.quantity || 0),
     0,
   );
 
@@ -518,25 +665,29 @@ const addAdminDriveStats = async (drive) => {
     )
     .reduce(
       (sum, donation) =>
-        sum + Number(donation.quantity || 0),
+        sum +
+        Number(donation.quantity || 0),
       0,
     );
 
-  const totalDistributed = distributions.reduce(
-    (sum, distribution) =>
-      sum +
-      Number(
-        distribution.quantityDistributed || 0,
-      ),
-    0,
-  );
+  const totalDistributed =
+    distributions.reduce(
+      (sum, distribution) =>
+        sum +
+        Number(
+          distribution.quantityDistributed ||
+            0,
+        ),
+      0,
+    );
 
   const beneficiariesAssisted =
     distributions.reduce(
       (sum, distribution) =>
         sum +
         Number(
-          distribution.beneficiariesAssisted || 0,
+          distribution.beneficiariesAssisted ||
+            0,
         ),
       0,
     );
@@ -550,9 +701,12 @@ const addAdminDriveStats = async (drive) => {
   };
 };
 
-const serializeAdminDrive = async (drive) => {
+const serializeAdminDrive = async (
+  drive,
+) => {
   const serialized = serializeDrive(drive);
-  const stats = await addAdminDriveStats(drive);
+  const stats =
+    await addAdminDriveStats(drive);
 
   return {
     ...serialized,
@@ -560,18 +714,26 @@ const serializeAdminDrive = async (drive) => {
   };
 };
 
-const listAdminDrives = async (req, res, next) => {
+const listAdminDrives = async (
+  req,
+  res,
+  next,
+) => {
   try {
-    const drives = await DonationDrive.find()
-      .populate(
-        'partnerId',
-        'fullName organizationName email',
-      )
-      .sort({ createdAt: -1 });
+    const drives =
+      await DonationDrive.find()
+        .populate(
+          'partnerId',
+          'fullName organizationName email',
+        )
+        .sort({ createdAt: -1 });
 
-    const serializedDrives = await Promise.all(
-      drives.map(serializeAdminDrive),
-    );
+    const serializedDrives =
+      await Promise.all(
+        drives.map(
+          serializeAdminDrive,
+        ),
+      );
 
     return res.json({
       drives: serializedDrives,
@@ -581,29 +743,39 @@ const listAdminDrives = async (req, res, next) => {
   }
 };
 
-const getAdminDrive = async (req, res, next) => {
+const getAdminDrive = async (
+  req,
+  res,
+  next,
+) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
-        message: 'Invalid donation drive ID format.',
+        message:
+          'Invalid donation drive ID format.',
       });
     }
 
-    const drive = await DonationDrive.findById(
-      req.params.id,
-    ).populate(
-      'partnerId',
-      'fullName organizationName email',
-    );
+    const drive =
+      await DonationDrive.findById(
+        req.params.id,
+      ).populate(
+        'partnerId',
+        'fullName organizationName email',
+      );
 
     if (!drive) {
       return res.status(404).json({
-        message: 'Donation drive not found.',
+        message:
+          'Donation drive not found.',
       });
     }
 
     return res.json({
-      drive: await serializeAdminDrive(drive),
+      drive:
+        await serializeAdminDrive(
+          drive,
+        ),
     });
   } catch (error) {
     return next(error);

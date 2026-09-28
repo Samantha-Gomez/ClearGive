@@ -66,14 +66,24 @@ const protectedDonationDriveFields = [
   'updatedAt',
 ];
 
+/*
+ * Donation creation:
+ * The partner must select an existing registered donor.
+ *
+ * donorId = selected registered donor's User._id
+ * item = donated item
+ * quantity = donated quantity
+ *
+ * contributorName is NOT accepted from the frontend.
+ * The backend gets the donor's registered fullName.
+ */
 const donationFields = [
-  'contributorName',
+  'donorId',
   'item',
   'quantity',
 ];
 
 const protectedDonationFields = [
-  'donorId',
   'driveId',
   'status',
   'recordedAt',
@@ -583,6 +593,17 @@ const validateDonationDriveUpdate = (
   next();
 };
 
+/*
+ * Donation creation validation
+ *
+ * Required:
+ * - donorId
+ * - item
+ * - quantity
+ *
+ * contributorName is intentionally NOT accepted.
+ * The server gets the donor's registered name from User.fullName.
+ */
 const validateDonationCreation = (
   req,
   res,
@@ -598,18 +619,16 @@ const validateDonationCreation = (
     return sendValidationError(res, bodyError);
   }
 
-  const contributorNameError = validateTextField(
-    req.body.contributorName,
-    'contributorName',
-    2,
-    150,
-    false,
-  );
-
-  if (contributorNameError) {
+  if (
+    !req.body.donorId ||
+    typeof req.body.donorId !== 'string' ||
+    !mongoose.Types.ObjectId.isValid(
+      req.body.donorId,
+    )
+  ) {
     return sendValidationError(
       res,
-      contributorNameError,
+      'Please select a valid registered donor.',
     );
   }
 
@@ -634,11 +653,7 @@ const validateDonationCreation = (
     return sendValidationError(res, quantityError);
   }
 
-  if (typeof req.body.contributorName === 'string') {
-    req.body.contributorName =
-      req.body.contributorName.trim();
-  }
-
+  req.body.donorId = req.body.donorId.trim();
   req.body.item = req.body.item.trim();
 
   next();

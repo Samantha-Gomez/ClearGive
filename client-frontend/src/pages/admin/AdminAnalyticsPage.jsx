@@ -3,6 +3,7 @@ import {
   Activity,
   BarChart3,
   CheckCircle2,
+  Clock3,
   HeartHandshake,
   Package,
   RefreshCw,
@@ -15,6 +16,16 @@ import { apiRequest } from '../../services/api'
 
 function formatNumber(value) {
   return Number(value || 0).toLocaleString()
+}
+
+function formatDecimal(value) {
+  return Number(value || 0).toLocaleString(
+    undefined,
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    },
+  )
 }
 
 function formatMonth(value) {
@@ -35,7 +46,24 @@ function formatMonth(value) {
 function getBarHeight(value, maximum) {
   if (!maximum || !value) return '0%'
 
-  return `${Math.max((value / maximum) * 100, 4)}%`
+  return `${Math.max(
+    (value / maximum) * 100,
+    4,
+  )}%`
+}
+
+function getFulfillmentPercentage(target, distributed) {
+  const targetValue = Number(target || 0)
+  const distributedValue = Number(distributed || 0)
+
+  if (!targetValue) return 0
+
+  return Math.min(
+    Math.round(
+      (distributedValue / targetValue) * 100,
+    ),
+    100,
+  )
 }
 
 export default function AdminAnalyticsPage() {
@@ -137,12 +165,16 @@ export default function AdminAnalyticsPage() {
   }
 
   const summary = analytics.summary || {}
+
   const monthlyActivity =
     analytics.monthlyActivity || []
+
   const driveBreakdown =
     analytics.driveBreakdown || []
+
   const categoryBreakdown =
     analytics.categoryBreakdown || {}
+
   const statusBreakdown =
     analytics.statusBreakdown || {}
 
@@ -219,11 +251,19 @@ export default function AdminAnalyticsPage() {
         />
 
         <DashboardStat
-          label="Items donated"
+          label="Items recorded"
           value={formatNumber(
             summary.totalDonated,
           )}
           icon={Package}
+        />
+
+        <DashboardStat
+          label="Items received"
+          value={formatNumber(
+            summary.totalReceived,
+          )}
+          icon={CheckCircle2}
         />
 
         <DashboardStat
@@ -240,6 +280,14 @@ export default function AdminAnalyticsPage() {
             summary.beneficiariesAssisted,
           )}
           icon={Users}
+        />
+
+        <DashboardStat
+          label="Avg. distribution delay"
+          value={`${formatDecimal(
+            summary.averageDistributionDelay,
+          )} days`}
+          icon={Clock3}
         />
 
         <DashboardStat
@@ -292,7 +340,7 @@ export default function AdminAnalyticsPage() {
                               monthlyMaximum,
                             ),
                         }}
-                        title={`Donated: ${formatNumber(
+                        title={`Recorded: ${formatNumber(
                           item.donated,
                         )}`}
                       />
@@ -330,7 +378,7 @@ export default function AdminAnalyticsPage() {
             <div className="analytics-legend">
               <span>
                 <i className="legend-dot donated" />
-                Donated
+                Recorded
               </span>
 
               <span>
@@ -339,6 +387,61 @@ export default function AdminAnalyticsPage() {
               </span>
             </div>
           )}
+        </div>
+
+        <div className="analytics-card">
+          <div className="analytics-card-heading">
+            <div>
+              <h2>Distribution delay</h2>
+
+              <p>
+                Time between receiving and
+                distributing donations.
+              </p>
+            </div>
+
+            <Clock3 size={20} />
+          </div>
+
+          <div className="analytics-breakdown">
+            <div className="analytics-breakdown-row">
+              <span>
+                Average delay
+              </span>
+
+              <strong>
+                {formatDecimal(
+                  summary.averageDistributionDelay,
+                )}{' '}
+                days
+              </strong>
+            </div>
+
+            <div className="analytics-breakdown-row">
+              <span>
+                Longest delay
+              </span>
+
+              <strong>
+                {formatDecimal(
+                  summary.longestDistributionDelay,
+                )}{' '}
+                days
+              </strong>
+            </div>
+
+            <div className="analytics-breakdown-row">
+              <span>
+                Completed donations
+              </span>
+
+              <strong>
+                {formatNumber(
+                  summary.completedDonations,
+                )}
+              </strong>
+            </div>
+          </div>
         </div>
 
         <div className="analytics-card">
@@ -426,8 +529,8 @@ export default function AdminAnalyticsPage() {
             <h2>Drive performance</h2>
 
             <p>
-              Donation and distribution
-              activity by drive.
+              Donation, receipt, and
+              distribution activity by drive.
             </p>
           </div>
         </div>
@@ -446,62 +549,75 @@ export default function AdminAnalyticsPage() {
                   <th>Category</th>
                   <th>Status</th>
                   <th>Target</th>
-                  <th>Donated</th>
+                  <th>Recorded</th>
                   <th>Received</th>
                   <th>Distributed</th>
+                  <th>Fulfillment</th>
                   <th>Beneficiaries</th>
                 </tr>
               </thead>
 
               <tbody>
                 {driveBreakdown.map(
-                  (drive) => (
-                    <tr
-                      key={drive.id}
-                    >
-                      <td>
-                        {drive.title}
-                      </td>
+                  (drive) => {
+                    const fulfillment =
+                      getFulfillmentPercentage(
+                        drive.targetQuantity,
+                        drive.distributed,
+                      )
 
-                      <td>
-                        {drive.category}
-                      </td>
+                    return (
+                      <tr
+                        key={drive.id}
+                      >
+                        <td>
+                          {drive.title}
+                        </td>
 
-                      <td>
-                        {drive.status}
-                      </td>
+                        <td>
+                          {drive.category}
+                        </td>
 
-                      <td>
-                        {formatNumber(
-                          drive.targetQuantity,
-                        )}
-                      </td>
+                        <td>
+                          {drive.status}
+                        </td>
 
-                      <td>
-                        {formatNumber(
-                          drive.donated,
-                        )}
-                      </td>
+                        <td>
+                          {formatNumber(
+                            drive.targetQuantity,
+                          )}
+                        </td>
 
-                      <td>
-                        {formatNumber(
-                          drive.received,
-                        )}
-                      </td>
+                        <td>
+                          {formatNumber(
+                            drive.donated,
+                          )}
+                        </td>
 
-                      <td>
-                        {formatNumber(
-                          drive.distributed,
-                        )}
-                      </td>
+                        <td>
+                          {formatNumber(
+                            drive.received,
+                          )}
+                        </td>
 
-                      <td>
-                        {formatNumber(
-                          drive.beneficiaries,
-                        )}
-                      </td>
-                    </tr>
-                  ),
+                        <td>
+                          {formatNumber(
+                            drive.distributed,
+                          )}
+                        </td>
+
+                        <td>
+                          {fulfillment}%
+                        </td>
+
+                        <td>
+                          {formatNumber(
+                            drive.beneficiaries,
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  },
                 )}
               </tbody>
             </table>

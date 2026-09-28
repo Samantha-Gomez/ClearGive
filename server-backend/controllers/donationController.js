@@ -9,13 +9,12 @@ const {
 } = require('../utils/notificationService');
 
 const donationFields = [
-  'contributorName',
+  'donorId',
   'item',
   'quantity',
 ];
 
 const protectedDonationFields = [
-  'donorId',
   'driveId',
   'status',
   'recordedAt',
@@ -60,19 +59,12 @@ const validateDonationBody = (body) => {
     return `${unknownField} is not an accepted field.`;
   }
 
-  if (body.contributorName !== undefined) {
-    if (
-      typeof body.contributorName !== 'string' ||
-      (
-        body.contributorName.trim().length > 0 &&
-        (
-          body.contributorName.trim().length < 2 ||
-          body.contributorName.trim().length > 150
-        )
-      )
-    ) {
-      return 'contributorName must be between 2 and 150 characters when provided.';
-    }
+  if (
+    !body.donorId ||
+    typeof body.donorId !== 'string' ||
+    !isValidObjectId(body.donorId.trim())
+  ) {
+    return 'Please select a valid registered donor.';
   }
 
   if (
@@ -114,12 +106,10 @@ const serializeDonation = (donation) => ({
 const recordDonation = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.driveId)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            'Invalid donation drive ID format.',
-        });
+      return res.status(400).json({
+        message:
+          'Invalid donation drive ID format.',
+      });
     }
 
     const bodyError = validateDonationBody(
@@ -127,11 +117,9 @@ const recordDonation = async (req, res, next) => {
     );
 
     if (bodyError) {
-      return res
-        .status(400)
-        .json({
-          message: bodyError,
-        });
+      return res.status(400).json({
+        message: bodyError,
+      });
     }
 
     const drive = await DonationDrive.findOne({
@@ -141,36 +129,53 @@ const recordDonation = async (req, res, next) => {
     });
 
     if (!drive) {
-      return res
-        .status(404)
-        .json({
-          message:
-            'Active donation drive not found.',
-        });
+      return res.status(404).json({
+        message:
+          'Active donation drive not found.',
+      });
+    }
+
+    /*
+     * Verify that the selected donor:
+     * - exists
+     * - is actually a donor account
+     * - is currently active
+     */
+    const donor = await User.findOne({
+      _id: req.body.donorId.trim(),
+      role: 'donor',
+      status: 'active',
+    }).select('_id fullName email');
+
+    if (!donor) {
+      return res.status(404).json({
+        message:
+          'Registered donor not found or donor account is inactive.',
+      });
     }
 
     const now = new Date();
 
+    /*
+     * The partner records a physical donation that
+     * has already been received.
+     *
+     * donorId comes from the registered donor selected
+     * by the partner.
+     *
+     * contributorName comes directly from the donor's
+     * registered fullName and cannot be manually entered.
+     */
     const donation = await Donation.create({
       driveId: drive._id,
 
-      // Physical donations are not linked
-      // to a donor account.
-      donorId: null,
+      donorId: donor._id,
 
-      contributorName:
-        typeof req.body.contributorName ===
-          'string' &&
-        req.body.contributorName.trim().length >
-          0
-          ? req.body.contributorName.trim()
-          : 'Anonymous Donor',
+      contributorName: donor.fullName,
 
       item: req.body.item.trim(),
       quantity: req.body.quantity,
 
-      // The partner is recording the donation
-      // after physically receiving it.
       status: 'Received',
       recordedAt: now,
       receivedAt: now,
@@ -186,7 +191,27 @@ const recordDonation = async (req, res, next) => {
       result: 'success',
     });
 
-    // Notify the partner who recorded the donation.
+    /*
+     * Notify the donor whose registered account
+     * was selected.
+     */
+    await createNotification({
+      recipient: donor._id,
+      role: 'donor',
+      type: 'donation_recorded',
+      title: 'Donation recorded',
+      message: `Your donation of ${donation.quantity} item${
+        donation.quantity === 1
+          ? ''
+          : 's'
+      } for "${drive.title}" has been recorded and received.`,
+      resourceType: 'drive',
+      resourceId: drive._id.toString(),
+    });
+
+    /*
+     * Notify the partner who recorded the donation.
+     */
     await createNotification({
       recipient: req.user._id,
       role: 'partner',
@@ -201,7 +226,9 @@ const recordDonation = async (req, res, next) => {
       resourceId: drive._id.toString(),
     });
 
-    // Notify all active admins.
+    /*
+     * Notify all active admins.
+     */
     const admins = await User.find({
       role: 'admin',
       status: 'active',
@@ -223,14 +250,12 @@ const recordDonation = async (req, res, next) => {
       })),
     );
 
-    return res
-      .status(201)
-      .json({
-        message:
-          'Donation recorded and received successfully.',
-        donation:
-          serializeDonation(donation),
-      });
+    return res.status(201).json({
+      message:
+        'Donation recorded and received successfully.',
+      donation:
+        serializeDonation(donation),
+    });
   } catch (error) {
     return next(error);
   }
@@ -243,12 +268,10 @@ const listDriveDonations = async (
 ) => {
   try {
     if (!isValidObjectId(req.params.driveId)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            'Invalid donation drive ID format.',
-        });
+      return res.status(400).json({
+        message:
+          'Invalid donation drive ID format.',
+      });
     }
 
     const drive = await DonationDrive.findOne({
@@ -257,11 +280,9 @@ const listDriveDonations = async (
     });
 
     if (!drive) {
-      return res
-        .status(404)
-        .json({
-          message: 'Donation drive not found.',
-        });
+      return res.status(404).json({
+        message: 'Donation drive not found.',
+      });
     }
 
     const donations = await Donation.find({
@@ -382,7 +403,7 @@ const receiveDonation = async (
       title: 'Donation received',
       message: `The donation from ${
         donation.contributorName ||
-        'Anonymous Donor'
+        'Registered Donor'
       } for "${drive.title}" has been marked as received.`,
       resourceType: 'drive',
       resourceId: drive._id.toString(),

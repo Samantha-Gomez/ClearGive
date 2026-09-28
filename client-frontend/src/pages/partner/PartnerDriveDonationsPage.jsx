@@ -19,7 +19,11 @@ export default function PartnerDriveDonationsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [recording, setRecording] = useState(false)
 
-  const [contributorName, setContributorName] = useState('')
+  const [donorSearch, setDonorSearch] = useState('')
+  const [donors, setDonors] = useState([])
+  const [selectedDonor, setSelectedDonor] = useState(null)
+  const [searchingDonors, setSearchingDonors] = useState(false)
+
   const [item, setItem] = useState('')
   const [quantity, setQuantity] = useState('')
 
@@ -37,12 +41,19 @@ export default function PartnerDriveDonationsPage() {
       setError('')
 
       try {
-        const [driveData, donationData] = await Promise.all([
-          apiRequest(`/partner/drives/${id}`),
-          apiRequest(`/partner/drives/${id}/donations`),
-        ])
+        const [driveData, donationData] =
+          await Promise.all([
+            apiRequest(
+              `/partner/drives/${id}`,
+            ),
+            apiRequest(
+              `/partner/drives/${id}/donations`,
+            ),
+          ])
 
-        setDrive(driveData.drive || driveData)
+        setDrive(
+          driveData.drive || driveData,
+        )
 
         setDonations(
           donationData.donations ||
@@ -66,12 +77,80 @@ export default function PartnerDriveDonationsPage() {
     loadData()
   }, [loadData])
 
-  const handleRecordDonation = async (event) => {
+  const handleSearchDonors = async (
+    event,
+  ) => {
+    const value = event.target.value
+
+    setDonorSearch(value)
+    setSelectedDonor(null)
+    setDonors([])
+
+    const searchValue = value.trim()
+
+    if (searchValue.length < 2) {
+      return
+    }
+
+    setSearchingDonors(true)
+    setError('')
+
+    try {
+      const data = await apiRequest(
+        `/partner/drives/donors/search?q=${encodeURIComponent(
+          searchValue,
+        )}`,
+      )
+
+      setDonors(data.donors || [])
+    } catch (err) {
+      setError(
+        err.message ||
+          'Unable to search registered donors.',
+      )
+    } finally {
+      setSearchingDonors(false)
+    }
+  }
+
+  const handleSelectDonor = (donor) => {
+    setSelectedDonor(donor)
+    setDonorSearch(donor.fullName)
+    setDonors([])
+  }
+
+  const handleRecordDonation = async (
+    event,
+  ) => {
     event.preventDefault()
 
-    setRecording(true)
     setError('')
     setSuccess('')
+
+    if (!selectedDonor) {
+      setError(
+        'Please search for and select a registered donor.',
+      )
+      return
+    }
+
+    if (!item.trim()) {
+      setError('Please enter the donated item.')
+      return
+    }
+
+    if (
+      !quantity ||
+      Number(quantity) < 1 ||
+      !Number.isInteger(Number(quantity))
+    ) {
+      setError(
+        'Please enter a valid whole-number quantity.',
+      )
+      return
+    }
+
+    setRecording(true)
 
     try {
       const data = await apiRequest(
@@ -79,8 +158,7 @@ export default function PartnerDriveDonationsPage() {
         {
           method: 'POST',
           body: {
-            contributorName:
-              contributorName.trim(),
+            donorId: selectedDonor.id,
             item: item.trim(),
             quantity: Number(quantity),
           },
@@ -98,12 +176,14 @@ export default function PartnerDriveDonationsPage() {
         await loadData(true)
       }
 
-      setContributorName('')
+      setDonorSearch('')
+      setDonors([])
+      setSelectedDonor(null)
       setItem('')
       setQuantity('')
 
       setSuccess(
-        'Physical donation recorded and received successfully.',
+        'Donation recorded and received successfully.',
       )
     } catch (err) {
       setError(
@@ -221,32 +301,95 @@ export default function PartnerDriveDonationsPage() {
           onSubmit={handleRecordDonation}
           className="form-grid"
         >
+          {/* REGISTERED DONOR */}
           <div className="form-group">
-            <label htmlFor="contributorName">
-              Contributor Name
-              <span className="optional-label">
+            <label htmlFor="donorSearch">
+              Registered Donor
+              <span className="required-label">
                 {' '}
-                (optional)
+                *
               </span>
             </label>
 
             <input
-              id="contributorName"
+              id="donorSearch"
               type="text"
-              value={contributorName}
-              onChange={(event) =>
-                setContributorName(
-                  event.target.value,
-                )
-              }
-              placeholder="Enter donor name"
+              value={donorSearch}
+              onChange={handleSearchDonors}
+              placeholder="Search donor by registered name"
+              autoComplete="off"
               maxLength={150}
+              required
             />
+
+            {searchingDonors && (
+              <div className="form-help">
+                <LoaderCircle
+                  size={15}
+                  className="spin"
+                />
+                Searching registered donors...
+              </div>
+            )}
+
+            {!searchingDonors &&
+              donorSearch.trim().length >= 2 &&
+              !selectedDonor &&
+              donors.length === 0 && (
+                <div className="form-help">
+                  No registered donor found.
+                </div>
+              )}
+
+            {donors.length > 0 && (
+              <div className="donor-search-results">
+                {donors.map((donor) => (
+                  <button
+                    key={donor.id}
+                    type="button"
+                    className="donor-search-result"
+                    onClick={() =>
+                      handleSelectDonor(
+                        donor,
+                      )
+                    }
+                  >
+                    <strong>
+                      {donor.fullName}
+                    </strong>
+
+                    {donor.email && (
+                      <span>
+                        {donor.email}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedDonor && (
+              <div className="selected-donor">
+                <CheckCircle size={16} />
+
+                <span>
+                  Selected donor:{' '}
+                  <strong>
+                    {selectedDonor.fullName}
+                  </strong>
+                </span>
+              </div>
+            )}
           </div>
 
+          {/* ITEM */}
           <div className="form-group">
             <label htmlFor="item">
               Item
+              <span className="required-label">
+                {' '}
+                *
+              </span>
             </label>
 
             <input
@@ -263,9 +406,14 @@ export default function PartnerDriveDonationsPage() {
             />
           </div>
 
+          {/* QUANTITY */}
           <div className="form-group">
             <label htmlFor="quantity">
               Quantity
+              <span className="required-label">
+                {' '}
+                *
+              </span>
             </label>
 
             <input
@@ -309,6 +457,7 @@ export default function PartnerDriveDonationsPage() {
         </form>
       </section>
 
+      {/* DONATION RECORDS */}
       <section className="detail-card">
         <div className="detail-card-header">
           <div>
@@ -343,7 +492,7 @@ export default function PartnerDriveDonationsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Contributor</th>
+                  <th>Registered Donor</th>
                   <th>Item</th>
                   <th>Quantity</th>
                   <th>Status</th>
@@ -355,7 +504,7 @@ export default function PartnerDriveDonationsPage() {
                 {donations.map((donation) => {
                   const contributor =
                     donation.contributorName ||
-                    'Anonymous Donor'
+                    'Registered Donor'
 
                   const dateValue =
                     donation.receivedAt ||

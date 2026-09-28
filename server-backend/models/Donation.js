@@ -10,19 +10,30 @@ const donationSchema = new mongoose.Schema(
       immutable: true,
     },
 
-    // Optional because physical donors do not need a ClearGive account.
+    /*
+     * Required registered donor account.
+     *
+     * Every donation recorded by a partner must be
+     * connected to an existing ClearGive donor account.
+     */
     donorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      default: null,
+      required: true,
       index: true,
       immutable: true,
     },
 
-    // Name recorded by the partner for a physical contributor.
+    /*
+     * Automatically copied from the registered
+     * donor's User.fullName.
+     *
+     * Partners cannot create an anonymous donation
+     * or manually enter a different donor name.
+     */
     contributorName: {
       type: String,
-      default: 'Anonymous Donor',
+      required: true,
       trim: true,
       minlength: 2,
       maxlength: 150,
@@ -86,4 +97,7 @@ const donationSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model('Donation', donationSchema);
+module.exports = mongoose.model(
+  'Donation',
+  donationSchema,
+);
