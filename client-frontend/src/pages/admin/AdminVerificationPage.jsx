@@ -7,13 +7,14 @@ import {
   X,
 } from 'lucide-react'
 import VerificationSummary from '../../components/verification/VerificationSummary'
-import { apiRequest } from '../../services/api'
+import { apiBlobRequest, apiRequest } from '../../services/api'
 
 export default function AdminVerificationPage() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [actionId, setActionId] = useState('')
+  const [downloadingDocument, setDownloadingDocument] = useState('')
   const [rejectionReasons, setRejectionReasons] =
     useState({})
   const [error, setError] = useState('')
@@ -150,6 +151,32 @@ export default function AdminVerificationPage() {
     }))
   }
 
+  const downloadDocument = async (requestId, field, fileMetadata) => {
+    setError('')
+    setDownloadingDocument(`${requestId}:${field}`)
+
+    try {
+      const blob = await apiBlobRequest(
+        `/admin/partner-verifications/${requestId}/documents/${field}`,
+      )
+      const objectUrl = URL.createObjectURL(blob)
+      const link = window.document.createElement('a')
+      link.href = objectUrl
+      link.download = fileMetadata.originalName || field
+      window.document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    } catch (requestError) {
+      setError(
+        requestError.message ||
+          'Unable to download the verification document.',
+      )
+    } finally {
+      setDownloadingDocument('')
+    }
+  }
+
   return (
     <section className="dashboard-page admin-verification-page">
       <div className="page-heading admin-page-heading">
@@ -270,6 +297,14 @@ export default function AdminVerificationPage() {
 
                 <VerificationSummary
                   verification={request}
+                  onDownloadDocument={(field, fileMetadata) =>
+                    downloadDocument(request.id, field, fileMetadata)
+                  }
+                  downloadingDocument={
+                    downloadingDocument.startsWith(`${request.id}:`)
+                      ? downloadingDocument.slice(request.id.length + 1)
+                      : ''
+                  }
                 />
 
                 <div className="review-actions">

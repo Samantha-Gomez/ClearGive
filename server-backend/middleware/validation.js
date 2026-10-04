@@ -10,13 +10,6 @@ const partnerOrganizationTypes = [
   'other',
 ];
 
-const documentRules = {
-  '.pdf': 'application/pdf',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-};
-
 const documentFields = [
   'registrationCertificate',
   'supportingOrganizationDocument',
@@ -31,7 +24,6 @@ const editableVerificationFields = [
   'contactNumber',
   'authorizedRepresentativeName',
   'representativePosition',
-  ...documentFields,
 ];
 
 const protectedVerificationFields = [
@@ -263,115 +255,6 @@ const validateObjectId = (req, res, next) => {
   }
 
   next();
-};
-
-const validateDocumentMetadata = (document, fieldName) => {
-  if (
-    !document ||
-    typeof document !== 'object' ||
-    Array.isArray(document)
-  ) {
-    return `${fieldName} metadata is required.`;
-  }
-
-  const forbiddenKeys = [
-    'content',
-    'data',
-    'base64',
-    'path',
-    'storagePath',
-    'buffer',
-  ];
-
-  if (
-    forbiddenKeys.some((key) =>
-      Object.prototype.hasOwnProperty.call(document, key),
-    )
-  ) {
-    return `${fieldName} must contain metadata only; file contents and paths are not accepted.`;
-  }
-
-  const allowedMetadataFields = [
-    'originalName',
-    'mimeType',
-    'extension',
-    'size',
-    'storageStatus',
-  ];
-
-  const unknownField = Object.keys(document).find(
-    (field) => !allowedMetadataFields.includes(field),
-  );
-
-  if (unknownField) {
-    return `${fieldName}.${unknownField} is not an accepted metadata field.`;
-  }
-
-  const {
-    originalName,
-    mimeType,
-    extension,
-    size,
-    storageStatus,
-  } = document;
-
-  const normalizedExtension =
-    typeof extension === 'string'
-      ? extension.trim().toLowerCase()
-      : '';
-
-  const normalizedOriginalName =
-    typeof originalName === 'string'
-      ? originalName.trim()
-      : '';
-
-  if (
-    !normalizedOriginalName ||
-    normalizedOriginalName.length > 255 ||
-    /[\\/]/.test(normalizedOriginalName) ||
-    normalizedOriginalName === '.' ||
-    normalizedOriginalName === '..'
-  ) {
-    return `${fieldName}.originalName must be a safe filename.`;
-  }
-
-  if (
-    !documentRules[normalizedExtension] ||
-    mimeType !== documentRules[normalizedExtension]
-  ) {
-    return `${fieldName} must be a PDF, JPG/JPEG, or PNG with a matching MIME type.`;
-  }
-
-  const lastDotIndex = normalizedOriginalName.lastIndexOf('.');
-
-  if (lastDotIndex <= 0) {
-    return `${fieldName}.originalName must include a valid file extension.`;
-  }
-
-  const originalNameExtension = normalizedOriginalName
-    .slice(lastDotIndex)
-    .toLowerCase();
-
-  if (originalNameExtension !== normalizedExtension) {
-    return `${fieldName}.originalName extension must match extension.`;
-  }
-
-  if (
-    !Number.isInteger(size) ||
-    size < 1 ||
-    size > 10 * 1024 * 1024
-  ) {
-    return `${fieldName}.size must be an integer between 1 byte and 10 MB.`;
-  }
-
-  if (
-    storageStatus !== undefined &&
-    storageStatus !== 'not_uploaded'
-  ) {
-    return `${fieldName}.storageStatus must be not_uploaded until storage is configured.`;
-  }
-
-  return null;
 };
 
 const validateBodyFields = (
@@ -682,33 +565,74 @@ const validateDonationReceiveAction = (
 };
 
 const validateProofMetadata = (proofMetadata) => {
-  if (Array.isArray(proofMetadata)) {
-    if (proofMetadata.length > 5) {
-      return 'proofMetadata cannot contain more than 5 documents.';
-    }
-
-    for (
-      let index = 0;
-      index < proofMetadata.length;
-      index += 1
-    ) {
-      const error = validateDocumentMetadata(
-        proofMetadata[index],
-        `proofMetadata[${index}]`,
-      );
-
-      if (error) {
-        return error;
-      }
-    }
-
-    return null;
+  if (
+    !proofMetadata ||
+    typeof proofMetadata !== 'object' ||
+    Array.isArray(proofMetadata)
+  ) {
+    return 'proofMetadata must be an object.';
   }
 
-  return validateDocumentMetadata(
-    proofMetadata,
-    'proofMetadata',
+  const allowedFields = [
+    'originalName',
+    'mimeType',
+    'extension',
+    'size',
+    'storageStatus',
+  ];
+
+  const unknownField = Object.keys(proofMetadata).find(
+    (field) => !allowedFields.includes(field),
   );
+
+  if (unknownField) {
+    return `proofMetadata.${unknownField} is not an accepted field.`;
+  }
+
+  if (
+    proofMetadata.originalName !== undefined &&
+    (typeof proofMetadata.originalName !== 'string' ||
+      proofMetadata.originalName.trim().length < 1 ||
+      proofMetadata.originalName.trim().length > 255)
+  ) {
+    return 'proofMetadata.originalName must be between 1 and 255 characters.';
+  }
+
+  if (
+    proofMetadata.mimeType !== undefined &&
+    !['application/pdf', 'image/jpeg', 'image/png'].includes(
+      proofMetadata.mimeType,
+    )
+  ) {
+    return 'proofMetadata.mimeType is not supported.';
+  }
+
+  if (
+    proofMetadata.extension !== undefined &&
+    !['.pdf', '.jpg', '.jpeg', '.png'].includes(
+      proofMetadata.extension,
+    )
+  ) {
+    return 'proofMetadata.extension is not supported.';
+  }
+
+  if (
+    proofMetadata.size !== undefined &&
+    (!Number.isInteger(proofMetadata.size) ||
+      proofMetadata.size < 1 ||
+      proofMetadata.size > 10 * 1024 * 1024)
+  ) {
+    return 'proofMetadata.size must be a positive integer no larger than 10MB.';
+  }
+
+  if (
+    proofMetadata.storageStatus !== undefined &&
+    proofMetadata.storageStatus !== 'not_uploaded'
+  ) {
+    return 'proofMetadata.storageStatus must be not_uploaded.';
+  }
+
+  return null;
 };
 
 const validateDistributionCreation = (
@@ -943,21 +867,6 @@ const validatePartnerVerificationFields = (
     }
   }
 
-  for (const field of documentFields) {
-    if (!requireAll && body[field] === undefined) {
-      continue;
-    }
-
-    const error = validateDocumentMetadata(
-      body[field],
-      field,
-    );
-
-    if (error) {
-      return error;
-    }
-  }
-
   if (
     !requireAll &&
     !Object.keys(body).some((key) =>
@@ -982,6 +891,23 @@ const validatePartnerVerificationSubmission = (
 
   if (error) {
     return sendValidationError(res, error);
+  }
+
+  const missingDocument = documentFields.find(
+    (field) => !req.files?.[field]?.[0],
+  );
+
+  if (missingDocument) {
+    const documentLabels = {
+      registrationCertificate: 'Registration Certificate',
+      supportingOrganizationDocument: 'Supporting Organization Document',
+      representativeGovernmentId: 'Representative Government ID',
+    };
+
+    return sendValidationError(
+      res,
+      `${documentLabels[missingDocument]} is required.`,
+    );
   }
 
   req.body.organizationName =

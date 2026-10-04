@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle2, Clock3, FileCheck2, Send, ShieldCheck } from 'lucide-react'
 import { apiRequest, ApiError } from '../../services/api'
 import DocumentMetadataFields from '../../components/verification/DocumentMetadataFields'
-import { getDocumentMimeType } from '../../components/verification/documentMetadata'
 import VerificationSummary from '../../components/verification/VerificationSummary'
 
-const emptyDocument = { originalName: '', extension: '.pdf', size: '' }
 const initialForm = {
   organizationName: '', organizationType: 'NGO/non-profit', address: '', officialEmail: '', contactNumber: '',
   authorizedRepresentativeName: '', representativePosition: '',
-  registrationCertificate: { ...emptyDocument },
-  supportingOrganizationDocument: { ...emptyDocument },
-  representativeGovernmentId: { ...emptyDocument },
+}
+
+const emptyDocuments = {
+  registrationCertificate: null,
+  supportingOrganizationDocument: null,
+  representativeGovernmentId: null,
 }
 
 function formFromVerification(verification) {
@@ -23,25 +24,7 @@ function formFromVerification(verification) {
     contactNumber: verification.contactNumber || '',
     authorizedRepresentativeName: verification.authorizedRepresentativeName || '',
     representativePosition: verification.representativePosition || '',
-    registrationCertificate: { ...emptyDocument, ...verification.registrationCertificate, size: verification.registrationCertificate?.size || '' },
-    supportingOrganizationDocument: { ...emptyDocument, ...verification.supportingOrganizationDocument, size: verification.supportingOrganizationDocument?.size || '' },
-    representativeGovernmentId: { ...emptyDocument, ...verification.representativeGovernmentId, size: verification.representativeGovernmentId?.size || '' },
   }
-}
-
-function toPayload(form) {
-  const fields = ['registrationCertificate', 'supportingOrganizationDocument', 'representativeGovernmentId']
-  const payload = { ...form }
-  fields.forEach((field) => {
-    payload[field] = {
-      originalName: form[field].originalName,
-      extension: form[field].extension,
-      mimeType: getDocumentMimeType(form[field].extension),
-      size: Number(form[field].size),
-      storageStatus: 'not_uploaded',
-    }
-  })
-  return payload
 }
 
 function StatusHeader({ status }) {
@@ -58,6 +41,7 @@ function StatusHeader({ status }) {
 export default function PartnerVerificationPage() {
   const [verification, setVerification] = useState(null)
   const [form, setForm] = useState(initialForm)
+  const [documents, setDocuments] = useState(emptyDocuments)
   const [status, setStatus] = useState('not_submitted')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -93,13 +77,10 @@ export default function PartnerVerificationPage() {
       }
     }
 
-    function updateDocument(field, property, value) {
-      setForm((current) => ({
+    function updateDocument(field, file) {
+      setDocuments((current) => ({
         ...current,
-        [field]: {
-          ...current[field],
-          [property]: value,
-        },
+        [field]: file,
       }))
 
       if (error) {
@@ -111,12 +92,40 @@ export default function PartnerVerificationPage() {
     event.preventDefault()
     setError('')
     setSuccess('')
+
+    const requiredDocuments = Object.keys(emptyDocuments).filter(
+      (field) =>
+        status !== 'rejected' ||
+        !verification?.[field]?.downloadAvailable,
+    )
+    const missingDocument = requiredDocuments.find(
+      (field) => !documents[field],
+    )
+
+    if (missingDocument) {
+      setError('Choose all three verification documents before submitting.')
+      return
+    }
+
     setSubmitting(true)
     try {
-      const data = await apiRequest(status === 'rejected' ? '/partner-verification/me' : '/partner-verification', { method: status === 'rejected' ? 'PATCH' : 'POST', body: toPayload(form) })
+      const body = new FormData()
+      Object.entries(form).forEach(([field, value]) => body.append(field, value))
+      Object.entries(documents).forEach(([field, file]) => {
+        if (file) body.append(field, file)
+      })
+
+      const data = await apiRequest(
+        status === 'rejected' ? '/partner-verification/me' : '/partner-verification',
+        {
+          method: status === 'rejected' ? 'PATCH' : 'POST',
+          body,
+        },
+      )
       setVerification(data.verification)
       setStatus(data.verification.status)
       setForm(formFromVerification(data.verification))
+      setDocuments({ ...emptyDocuments })
       setSuccess(data.message)
     } catch (requestError) {
       setError(requestError.message)
@@ -147,7 +156,12 @@ export default function PartnerVerificationPage() {
             <div><label htmlFor="representativePosition">Representative position</label><input id="representativePosition" name="representativePosition" value={form.representativePosition} onChange={updateField} required /></div>
           </div>
         </fieldset>
-        <DocumentMetadataFields documents={form} onChange={updateDocument} />
+        <DocumentMetadataFields
+          documents={documents}
+          existingDocuments={verification}
+          required={status !== 'rejected'}
+          onChange={updateDocument}
+        />
         <button className="primary-button verification-submit" type="submit" disabled={submitting}><Send size={18} /> {submitting ? 'Submitting...' : status === 'rejected' ? 'Resubmit for review' : 'Submit for review'}</button>
       </form>}
     </section>

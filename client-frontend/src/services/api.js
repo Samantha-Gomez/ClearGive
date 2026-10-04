@@ -20,8 +20,12 @@ export async function apiRequest(path, options = {}) {
   const { body, headers = {}, ...requestOptions } = options
   const token = getStoredToken()
   const requestHeaders = { ...headers }
+  const isFormData =
+    typeof FormData !== 'undefined' && body instanceof FormData
 
-  if (body !== undefined) requestHeaders['Content-Type'] = 'application/json'
+  if (body !== undefined && !isFormData) {
+    requestHeaders['Content-Type'] = 'application/json'
+  }
   if (token) requestHeaders.Authorization = `Bearer ${token}`
 
   let response
@@ -29,7 +33,12 @@ export async function apiRequest(path, options = {}) {
     response = await fetch(`${API_URL}${path}`, {
       ...requestOptions,
       headers: requestHeaders,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? body
+            : JSON.stringify(body),
     })
   } catch {
     throw new ApiError('Unable to connect to the ClearGive server.', 0)
@@ -48,6 +57,33 @@ export async function apiRequest(path, options = {}) {
   }
 
   return data
+}
+
+export async function apiBlobRequest(path) {
+  const token = getStoredToken()
+  const headers = token
+    ? { Authorization: `Bearer ${token}` }
+    : {}
+
+  let response
+  try {
+    response = await fetch(`${API_URL}${path}`, { headers })
+  } catch {
+    throw new ApiError('Unable to connect to the ClearGive server.', 0)
+  }
+
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type') || ''
+    const data = contentType.includes('application/json')
+      ? await response.json()
+      : await response.text()
+    const message = typeof data === 'object' && data?.message
+      ? data.message
+      : 'The document could not be downloaded.'
+    throw new ApiError(message, response.status, data)
+  }
+
+  return response.blob()
 }
 
 export { TOKEN_KEY }

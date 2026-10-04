@@ -1,6 +1,15 @@
 const mongoose = require('mongoose');
+const fs = require('node:fs/promises');
+const { createReadStream } = require('node:fs');
 const PartnerVerification = require('../models/PartnerVerification');
 const User = require('../models/User');
+const {
+  documentTypes,
+  getVerificationFilePath,
+  inspectVerificationFile,
+  removeVerificationFile,
+  storeVerificationFile,
+} = require('../utils/verificationDocumentStorage');
 const { logActivity } = require('../utils/activityLogger');
 const {
   createNotification,
@@ -15,9 +24,6 @@ const editableFields = [
   'contactNumber',
   'authorizedRepresentativeName',
   'representativePosition',
-  'registrationCertificate',
-  'supportingOrganizationDocument',
-  'representativeGovernmentId',
 ];
 
 const documentFields = [
@@ -26,123 +32,11 @@ const documentFields = [
   'representativeGovernmentId',
 ];
 
-const allowedDocumentMimeTypes = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-];
-
-const allowedDocumentExtensions = [
-  'pdf',
-  'jpg',
-  'jpeg',
-  'png',
-];
-
-const maxDocumentSize = 10 * 1024 * 1024;
-
 const isValidObjectId = (value) =>
   mongoose.Types.ObjectId.isValid(value);
 
 const ensureBodyObject = (body) =>
   body && typeof body === 'object' && !Array.isArray(body);
-
-const validateDocumentMetadata = (document, fieldName) => {
-  if (document === undefined) {
-    return null;
-  }
-
-  if (
-    !document ||
-    typeof document !== 'object' ||
-    Array.isArray(document)
-  ) {
-    return `${fieldName} must be an object.`;
-  }
-
-  const allowedFields = [
-    'originalName',
-    'mimeType',
-    'extension',
-    'size',
-    'storageStatus',
-  ];
-
-  const unknownField = Object.keys(document).find(
-    (field) => !allowedFields.includes(field),
-  );
-
-  if (unknownField) {
-    return `${fieldName}.${unknownField} is not an accepted field.`;
-  }
-
-  if (
-    typeof document.originalName !== 'string' ||
-    document.originalName.trim().length < 1 ||
-    document.originalName.trim().length > 255
-  ) {
-    return `${fieldName}.originalName must be between 1 and 255 characters.`;
-  }
-
-  const safeFileNamePattern = /^[a-zA-Z0-9._() -]+$/;
-
-  if (!safeFileNamePattern.test(document.originalName.trim())) {
-    return `${fieldName}.originalName contains invalid characters.`;
-  }
-
-  if (
-    typeof document.mimeType !== 'string' ||
-    !allowedDocumentMimeTypes.includes(
-      document.mimeType.toLowerCase(),
-    )
-  ) {
-    return `${fieldName}.mimeType is not supported.`;
-  }
-
-  if (
-    typeof document.extension !== 'string' ||
-    !allowedDocumentExtensions.includes(
-      document.extension.toLowerCase().replace('.', ''),
-    )
-  ) {
-    return `${fieldName}.extension is not supported.`;
-  }
-
-  if (
-    !Number.isInteger(document.size) ||
-    document.size < 1 ||
-    document.size > maxDocumentSize
-  ) {
-    return `${fieldName}.size must be between 1 byte and 10MB.`;
-  }
-
-  if (
-    document.storageStatus !== undefined &&
-    document.storageStatus !== 'not_uploaded'
-  ) {
-    return `${fieldName}.storageStatus must be not_uploaded.`;
-  }
-
-  const extension = document.extension
-    .toLowerCase()
-    .replace('.', '');
-
-  const mimeExtensionMatch = {
-    'application/pdf': ['pdf'],
-    'image/jpeg': ['jpg', 'jpeg'],
-    'image/png': ['png'],
-  };
-
-  if (
-    !mimeExtensionMatch[document.mimeType.toLowerCase()]?.includes(
-      extension,
-    )
-  ) {
-    return `${fieldName}.mimeType and extension do not match.`;
-  }
-
-  return null;
-};
 
 const validateVerificationBody = (
   body,
@@ -237,27 +131,6 @@ const validateVerificationBody = (
     }
   }
 
-  for (const field of documentFields) {
-    const documentError = validateDocumentMetadata(
-      body[field],
-      field,
-    );
-
-    if (documentError) {
-      return documentError;
-    }
-  }
-
-  if (requireAllFields) {
-    const missingDocument = documentFields.find(
-      (field) => body[field] === undefined,
-    );
-
-    if (missingDocument) {
-      return `${missingDocument} is required.`;
-    }
-  }
-
   return null;
 };
 
@@ -267,11 +140,17 @@ const serializeDocument = (document) => {
   }
 
   return {
+    documentType: document.documentType,
     originalName: document.originalName,
     mimeType: document.mimeType,
     extension: document.extension,
     size: document.size,
     storageStatus: document.storageStatus,
+    uploadedAt: document.uploadedAt || null,
+    downloadAvailable:
+      document.storageStatus === 'stored' &&
+      document.storageProvider === 'local' &&
+      Boolean(document.storageKey),
   };
 };
 
@@ -309,6 +188,65 @@ const serializeVerification = (verification) => ({
   reviewedAt: verification.reviewedAt,
   reviewedBy: verification.reviewedBy || null,
 });
+
+const saveUploadedDocuments = async (
+  files,
+  { requireAllFields = false, verification = null } = {},
+) => {
+  const selectedFiles = {};
+
+  for (const field of documentFields) {
+    const file = files?.[field]?.[0];
+
+    if (!file) {
+      if (requireAllFields) {
+        const error = new Error(`${documentTypes[field]} is required.`);
+        error.statusCode = 400;
+        throw error;
+      }
+
+      continue;
+    }
+
+    selectedFiles[field] = inspectVerificationFile(file, field);
+  }
+
+  const storedDocuments = {};
+
+  try {
+    for (const field of documentFields) {
+      if (selectedFiles[field]) {
+        storedDocuments[field] = await storeVerificationFile(
+          files[field][0],
+          selectedFiles[field],
+        );
+      }
+    }
+  } catch (error) {
+    await Promise.allSettled(
+      Object.values(storedDocuments).map(removeVerificationFile),
+    );
+    throw error;
+  }
+
+  const replacedDocuments = verification
+    ? documentFields
+        .filter((field) => storedDocuments[field] && verification[field]?.storageKey)
+        .map((field) => verification[field])
+    : [];
+
+  return { storedDocuments, replacedDocuments };
+};
+
+const cleanupReplacedDocuments = async (documents) => {
+  const results = await Promise.allSettled(
+    documents.map(removeVerificationFile),
+  );
+
+  if (results.some((result) => result.status === 'rejected')) {
+    console.error('A replaced verification document could not be removed.');
+  }
+};
 
 const updatePartnerState = async (userId, status) => {
   await User.findOneAndUpdate(
@@ -373,17 +311,32 @@ const submitVerification = async (req, res, next) => {
       });
     }
 
-    const verification = await PartnerVerification.create({
-      user: req.user._id,
-      ...Object.fromEntries(
-        editableFields.map((field) => [
-          field,
-          req.body[field],
-        ]),
-      ),
-      status: 'pending',
-      submittedAt: new Date(),
-    });
+    const { storedDocuments } = await saveUploadedDocuments(
+      req.files,
+      { requireAllFields: true },
+    );
+
+    let verification;
+
+    try {
+      verification = await PartnerVerification.create({
+        user: req.user._id,
+        ...Object.fromEntries(
+          editableFields.map((field) => [
+            field,
+            req.body[field],
+          ]),
+        ),
+        ...storedDocuments,
+        status: 'pending',
+        submittedAt: new Date(),
+      });
+    } catch (error) {
+      await Promise.allSettled(
+        Object.values(storedDocuments).map(removeVerificationFile),
+      );
+      throw error;
+    }
 
     await updatePartnerState(req.user._id, 'pending');
 
@@ -479,12 +432,18 @@ const resubmitVerification = async (req, res, next) => {
       });
     }
 
+    const { storedDocuments, replacedDocuments } =
+      await saveUploadedDocuments(req.files, { verification });
+
     for (const field of editableFields) {
       if (req.body[field] !== undefined) {
-        verification[field] =
-          typeof req.body[field] === 'string'
-            ? req.body[field].trim()
-            : req.body[field];
+        verification[field] = req.body[field].trim();
+      }
+    }
+
+    for (const field of documentFields) {
+      if (storedDocuments[field]) {
+        verification[field] = storedDocuments[field];
       }
     }
 
@@ -494,7 +453,16 @@ const resubmitVerification = async (req, res, next) => {
     verification.reviewedAt = null;
     verification.submittedAt = new Date();
 
-    await verification.save();
+    try {
+      await verification.save();
+    } catch (error) {
+      await Promise.allSettled(
+        Object.values(storedDocuments).map(removeVerificationFile),
+      );
+      throw error;
+    }
+
+    await cleanupReplacedDocuments(replacedDocuments);
 
     await updatePartnerState(req.user._id, 'pending');
 
@@ -601,6 +569,67 @@ const getVerificationById = async (req, res, next) => {
       verification: serializeVerification(verification),
     });
   } catch (error) {
+    return next(error);
+  }
+};
+
+const getVerificationDocument = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid verification ID format.',
+      });
+    }
+
+    if (!documentFields.includes(req.params.documentType)) {
+      return res.status(404).json({
+        message: 'Verification document not found.',
+      });
+    }
+
+    const verification = await PartnerVerification.findById(req.params.id);
+    const document = verification?.[req.params.documentType];
+
+    if (
+      !document ||
+      document.storageStatus !== 'stored' ||
+      document.storageProvider !== 'local' ||
+      !document.storageKey
+    ) {
+      return res.status(404).json({
+        message: 'Verification document not found.',
+      });
+    }
+
+    const filePath = getVerificationFilePath(document.storageKey);
+    await fs.access(filePath);
+
+    res.set({
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Type': document.mimeType,
+    });
+    res.attachment(document.originalName);
+
+    const stream = createReadStream(filePath);
+    stream.on('error', (error) => {
+      if (error.code === 'ENOENT' && !res.headersSent) {
+        return res.status(404).json({
+          message: 'Verification document not found.',
+        });
+      }
+
+      if (!res.headersSent) return next(error);
+      return res.destroy();
+    });
+    stream.pipe(res);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({
+        message: 'Verification document not found.',
+      });
+    }
+
     return next(error);
   }
 };
@@ -809,6 +838,7 @@ module.exports = {
   resubmitVerification,
   listVerifications,
   getVerificationById,
+  getVerificationDocument,
   approveVerification,
   rejectVerification,
 };

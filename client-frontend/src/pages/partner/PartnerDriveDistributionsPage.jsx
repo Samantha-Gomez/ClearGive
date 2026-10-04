@@ -19,6 +19,8 @@ const emptyForm = {
   proofFileSize: '',
 }
 
+const getDonationId = (donation) => donation?.id || donation?._id
+
 export default function PartnerDriveDistributionsPage() {
   const { id } = useParams()
 
@@ -90,8 +92,8 @@ export default function PartnerDriveDistributionsPage() {
             return (
               nextDonations.find(
                 (donation) =>
-                  donation._id ===
-                  current._id,
+                  getDonationId(donation) ===
+                  getDonationId(current),
               ) || null
             )
           },
@@ -144,7 +146,7 @@ export default function PartnerDriveDistributionsPage() {
   ) => {
     const distributed =
       getDistributedQuantity(
-        donation._id,
+        getDonationId(donation),
       )
 
     return Math.max(
@@ -337,7 +339,7 @@ export default function PartnerDriveDistributionsPage() {
             method: 'POST',
             body: {
               donationId:
-                selectedDonation._id,
+                getDonationId(selectedDonation),
               quantityDistributed,
               beneficiariesAssisted,
               notes:
@@ -366,8 +368,8 @@ export default function PartnerDriveDistributionsPage() {
           (current) =>
             current.map(
               (donation) =>
-                donation._id ===
-                selectedDonation._id
+                getDonationId(donation) ===
+                getDonationId(selectedDonation)
                   ? {
                       ...donation,
                       status:
@@ -527,8 +529,8 @@ export default function PartnerDriveDistributionsPage() {
                   )
 
                 const isSelected =
-                  selectedDonation?._id ===
-                  donation._id
+                  getDonationId(selectedDonation) ===
+                  getDonationId(donation)
 
                 return (
                   <div
@@ -538,7 +540,7 @@ export default function PartnerDriveDistributionsPage() {
                         : ''
                     }`}
                     key={
-                      donation._id
+                      getDonationId(donation)
                     }
                   >
                     <div>
@@ -876,11 +878,18 @@ export default function PartnerDriveDistributionsPage() {
                   (
                     distribution,
                   ) => {
+                    const distributionDonationId =
+                      distribution.donationId?._id ||
+                      distribution.donationId?.id ||
+                      distribution.donationId
+
                     const donation =
-                      distribution.donationId &&
-                      typeof distribution.donationId ===
-                        'object'
-                        ? distribution.donationId
+                      distributionDonationId
+                        ? donations.find(
+                            (item) =>
+                              String(getDonationId(item)) ===
+                              String(distributionDonationId),
+                          )
                         : null
 
                     const dateValue =
@@ -890,6 +899,7 @@ export default function PartnerDriveDistributionsPage() {
                     return (
                       <tr
                         key={
+                          distribution.id ||
                           distribution._id
                         }
                       >

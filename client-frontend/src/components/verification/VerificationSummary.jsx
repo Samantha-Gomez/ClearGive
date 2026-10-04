@@ -4,12 +4,19 @@ const documentLabels = {
   representativeGovernmentId: 'Representative government ID',
 }
 
+import { Download } from 'lucide-react'
+
 function formatDate(value) {
   if (!value) return 'Not available'
   return new Date(value).toLocaleDateString()
 }
 
-export default function VerificationSummary({ verification, showDocuments = true }) {
+export default function VerificationSummary({
+  verification,
+  showDocuments = true,
+  onDownloadDocument,
+  downloadingDocument,
+}) {
   return (
     <div className="verification-summary">
       <div className="summary-fields">
@@ -23,13 +30,28 @@ export default function VerificationSummary({ verification, showDocuments = true
         <div><span>Submitted</span><strong>{formatDate(verification.submittedAt)}</strong></div>
       </div>
       {showDocuments && <div className="submitted-documents">
-        <h3>Submitted document metadata</h3>
+        <h3>Verification documents</h3>
         {Object.entries(documentLabels).map(([field, label]) => {
           const document = verification[field]
           return <div className="submitted-document" key={field}>
             <span>{label}</span>
             <strong>{document?.originalName || 'Not available'}</strong>
-            <small>{document ? `${document.mimeType} · ${document.size} bytes · ${document.storageStatus}` : 'Not available'}</small>
+            <small>
+              {document
+                ? `${document.mimeType} · ${document.size} bytes · ${document.storageStatus}`
+                : 'Not available'}
+            </small>
+            {onDownloadDocument && document?.downloadAvailable && (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => onDownloadDocument(field, document)}
+                disabled={downloadingDocument === field}
+              >
+                <Download size={16} />
+                {downloadingDocument === field ? 'Preparing...' : 'Download document'}
+              </button>
+            )}
           </div>
         })}
       </div>}

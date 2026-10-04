@@ -1,7 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const dns = require('dns');
 require('dotenv').config();
+
+if (process.env.NODE_ENV !== 'production') {
+  dns.setServers(['1.1.1.1']);
+}
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');

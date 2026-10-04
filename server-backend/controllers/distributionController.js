@@ -49,6 +49,7 @@ const validateProofMetadata = (proofMetadata) => {
   const allowedFields = [
     'originalName',
     'mimeType',
+    'extension',
     'size',
     'storageStatus',
   ];
@@ -72,11 +73,20 @@ const validateProofMetadata = (proofMetadata) => {
 
   if (
     proofMetadata.mimeType !== undefined &&
-    (typeof proofMetadata.mimeType !== 'string' ||
-      proofMetadata.mimeType.trim().length < 1 ||
-      proofMetadata.mimeType.trim().length > 100)
+    !['application/pdf', 'image/jpeg', 'image/png'].includes(
+      proofMetadata.mimeType,
+    )
   ) {
-    return 'proofMetadata.mimeType must be between 1 and 100 characters.';
+    return 'proofMetadata.mimeType is not supported.';
+  }
+
+  if (
+    proofMetadata.extension !== undefined &&
+    !['.pdf', '.jpg', '.jpeg', '.png'].includes(
+      proofMetadata.extension,
+    )
+  ) {
+    return 'proofMetadata.extension is not supported.';
   }
 
   if (

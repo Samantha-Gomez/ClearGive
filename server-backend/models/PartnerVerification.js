@@ -26,8 +26,27 @@ const documentMetadataSchema = new mongoose.Schema(
     },
     storageStatus: {
       type: String,
-      enum: ['not_uploaded'],
+      enum: ['not_uploaded', 'stored'],
       default: 'not_uploaded',
+    },
+    documentType: {
+      type: String,
+      enum: [
+        'registrationCertificate',
+        'supportingOrganizationDocument',
+        'representativeGovernmentId',
+      ],
+    },
+    storageProvider: {
+      type: String,
+      enum: ['local'],
+    },
+    storageKey: {
+      type: String,
+      trim: true,
+    },
+    uploadedAt: {
+      type: Date,
     },
   },
   { _id: false },

@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const proofMetadataSchema = new mongoose.Schema(
   {
-    originalName: { type: String, required: true, trim: true, maxlength: 255 },
-    mimeType: { type: String, required: true, enum: ['application/pdf', 'image/jpeg', 'image/png'] },
-    extension: { type: String, required: true, enum: ['.pdf', '.jpg', '.jpeg', '.png'] },
-    size: { type: Number, required: true, min: 1, max: 10 * 1024 * 1024 },
+    originalName: { type: String, trim: true, minlength: 1, maxlength: 255 },
+    mimeType: { type: String, enum: ['application/pdf', 'image/jpeg', 'image/png'] },
+    extension: { type: String, enum: ['.pdf', '.jpg', '.jpeg', '.png'] },
+    size: { type: Number, min: 1, max: 10 * 1024 * 1024 },
     storageStatus: { type: String, enum: ['not_uploaded'], default: 'not_uploaded' },
   },
   { _id: false }

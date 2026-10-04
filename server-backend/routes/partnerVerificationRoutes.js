@@ -9,12 +9,23 @@ const {
   validatePartnerVerificationSubmission,
   validatePartnerVerificationResubmission,
 } = require('../middleware/validation');
+const uploadVerificationDocuments = require('../middleware/verificationDocumentUpload');
 
 const router = express.Router();
 
 router.use(authenticate, authorize('partner'));
-router.post('/', validatePartnerVerificationSubmission, submitVerification);
+router.post(
+  '/',
+  uploadVerificationDocuments,
+  validatePartnerVerificationSubmission,
+  submitVerification,
+);
 router.get('/me', getMyVerification);
-router.patch('/me', validatePartnerVerificationResubmission, resubmitVerification);
+router.patch(
+  '/me',
+  uploadVerificationDocuments,
+  validatePartnerVerificationResubmission,
+  resubmitVerification,
+);
 
 module.exports = router;
