@@ -34,6 +34,18 @@ const authLimiter = rateLimit({
   },
 });
 
+const emailVerificationResendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 1,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.body.email,
+  message: {
+    message:
+      'Please wait at least one minute before requesting another verification code.',
+  },
+});
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -54,5 +66,6 @@ const generalLimiter = rateLimit({
 
 module.exports = {
   authLimiter,
+  emailVerificationResendLimiter,
   generalLimiter,
 };

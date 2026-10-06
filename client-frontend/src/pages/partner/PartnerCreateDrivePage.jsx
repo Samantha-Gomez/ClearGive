@@ -3,6 +3,8 @@ import {
   ArrowLeft,
   CheckCircle,
   LoaderCircle,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
@@ -22,6 +24,8 @@ const initialForm = {
   category: '',
   targetQuantity: '',
   location: '',
+  eventDate: '',
+  requestedItems: [{ name: '', quantity: '' }],
   assistanceReference: '',
 }
 
@@ -65,6 +69,33 @@ export default function PartnerCreateDrivePage() {
     }
   }
 
+  const updateRequestedItem = (index, field, value) => {
+    setForm((current) => ({
+      ...current,
+      requestedItems: current.requestedItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    }))
+
+    setError('')
+  }
+
+  const addRequestedItem = () => {
+    setForm((current) => ({
+      ...current,
+      requestedItems: [...current.requestedItems, { name: '', quantity: '' }],
+    }))
+  }
+
+  const removeRequestedItem = (index) => {
+    setForm((current) => ({
+      ...current,
+      requestedItems: current.requestedItems.filter(
+        (_, itemIndex) => itemIndex !== index,
+      ),
+    }))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
 
@@ -84,6 +115,10 @@ export default function PartnerCreateDrivePage() {
     const targetQuantity = Number(
       form.targetQuantity,
     )
+    const requestedItems = form.requestedItems.map((item) => ({
+      name: item.name.trim(),
+      quantity: Number(item.quantity),
+    }))
 
     if (
       title.length < 3 ||
@@ -131,6 +166,34 @@ export default function PartnerCreateDrivePage() {
       return
     }
 
+    if (!form.eventDate) {
+      setError('Please choose the drive/event date.')
+      return
+    }
+
+    if (
+      !Number.isFinite(new Date(`${form.eventDate}T00:00:00.000Z`).getTime()) ||
+      new Date(`${form.eventDate}T00:00:00.000Z`).toISOString().slice(0, 10) !== form.eventDate
+    ) {
+      setError('Please enter a valid drive/event date.')
+      return
+    }
+
+    if (
+      requestedItems.length < 1 ||
+      requestedItems.some(
+        (item) =>
+          !item.name ||
+          item.name.length > 150 ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1 ||
+          item.quantity > 100000000,
+      )
+    ) {
+      setError('Each requested item needs a name and a positive whole-number quantity.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -145,6 +208,8 @@ export default function PartnerCreateDrivePage() {
               form.category,
             targetQuantity,
             location,
+            eventDate: form.eventDate,
+            requestedItems,
             assistanceReference:
               assistanceReference ||
               undefined,
@@ -342,6 +407,85 @@ export default function PartnerCreateDrivePage() {
                 required
                 disabled={submitting}
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="eventDate">
+                Drive / Event Date
+              </label>
+              <input
+                id="eventDate"
+                name="eventDate"
+                type="date"
+                value={form.eventDate}
+                onChange={handleChange}
+                required
+                disabled={submitting}
+              />
+            </div>
+
+            <div className="form-group requested-items-form-group">
+              <div>
+                <label>Requested Items</label>
+                <p className="field-hint">
+                  List each item donors should bring and the quantity needed.
+                </p>
+              </div>
+
+              {form.requestedItems.map((item, index) => (
+                <div className="form-row requested-item-row" key={index}>
+                  <div className="form-group">
+                    <label htmlFor={`requested-item-${index}`}>Item name</label>
+                    <input
+                      id={`requested-item-${index}`}
+                      type="text"
+                      value={item.name}
+                      onChange={(event) => updateRequestedItem(index, 'name', event.target.value)}
+                      maxLength={150}
+                      placeholder="Example: Notebooks"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor={`requested-quantity-${index}`}>Quantity needed</label>
+                    <input
+                      id={`requested-quantity-${index}`}
+                      type="number"
+                      value={item.quantity}
+                      onChange={(event) => updateRequestedItem(index, 'quantity', event.target.value)}
+                      min="1"
+                      max="100000000"
+                      step="1"
+                      placeholder="Example: 100"
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                  {form.requestedItems.length > 1 && (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => removeRequestedItem(index)}
+                      aria-label={`Remove requested item ${index + 1}`}
+                      disabled={submitting}
+                    >
+                      <Trash2 size={16} />
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={addRequestedItem}
+                disabled={submitting || form.requestedItems.length >= 50}
+              >
+                <Plus size={17} />
+                Add requested item
+              </button>
             </div>
 
             <div className="form-group">

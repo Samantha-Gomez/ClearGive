@@ -32,15 +32,34 @@ const features = [
 ]
 
 const steps = [
-  'Organizations create donation drives based on community needs.',
-  'Donors browse active drives and record the items they want to contribute.',
-  'Partners receive and distribute donations to beneficiaries.',
-  'ClearGive keeps activity records to support transparency.',
+  'Register for a ClearGive account as a donor.',
+  'Sign in to find an available donation drive.',
+  'Review the requested items and the drive location.',
+  'Bring your donation directly to the stated location.',
+  'The partner records the donation when it is received.',
+  'Partners record distribution, and donors can follow updates.',
 ]
 
 export default function DashboardPage() {
   return (
     <main className="landing-page">
+      <header className="landing-nav">
+        <Link className="brand" to="/" aria-label="ClearGive home">
+          <span className="brand-mark">
+            <HeartHandshake size={21} />
+          </span>
+          <span>ClearGive</span>
+        </Link>
+
+        <nav className="landing-nav-links" aria-label="Landing page navigation">
+          <a href="#what-is-cleargive">What is ClearGive?</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="#contact">Contact</a>
+          <Link className="secondary-button" to="/login">Login</Link>
+          <Link className="primary-button" to="/register">Register</Link>
+        </nav>
+      </header>
+
       <section className="landing-hero">
         <div className="landing-hero-content">
           <p className="eyebrow">Community Donation & Assistance</p>
@@ -73,9 +92,9 @@ export default function DashboardPage() {
           <h2>Making giving easier.</h2>
 
           <p>
-            Discover active donation drives, contribute essential goods, and
-            help communities keep track of assistance from collection to
-            distribution.
+            After registering, donors can browse available drives and bring
+            requested goods directly to the stated location. Partners record
+            donations and distributions.
           </p>
 
           <div className="landing-check">
@@ -95,13 +114,14 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="landing-section">
+      <section className="landing-section" id="what-is-cleargive">
         <div className="section-heading">
-          <p className="eyebrow">What ClearGive provides</p>
-          <h2>A clearer way to support communities.</h2>
+          <p className="eyebrow">About ClearGive</p>
+          <h2>What is ClearGive?</h2>
           <p className="muted">
-            ClearGive brings donors and community organizations together in
-            one organized platform.
+            ClearGive is a web-based donation and community assistance
+            management system that connects donors with verified partner
+            organizations and the drives they organize.
           </p>
         </div>
 
@@ -123,10 +143,13 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="landing-section landing-how-it-works">
+      <section className="landing-section landing-how-it-works" id="how-it-works">
         <div className="section-heading">
-          <p className="eyebrow">How it works</p>
-          <h2>From a community need to meaningful assistance.</h2>
+          <p className="eyebrow">Your donation journey</p>
+          <h2>How it works</h2>
+          <p className="muted">
+            From a community need to meaningful assistance.
+          </p>
         </div>
 
         <div className="landing-steps">
@@ -142,12 +165,23 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <section className="landing-section" id="contact">
+        <div className="section-heading">
+          <p className="eyebrow">Contact</p>
+          <h2>Questions about ClearGive?</h2>
+          <p className="muted">
+            Please contact the project team through the official contact
+            details provided by your institution.
+          </p>
+        </div>
+      </section>
+
       <section className="landing-cta">
         <div>
           <p className="eyebrow">Ready to help?</p>
           <h2>Be part of a more organized way of giving.</h2>
           <p className="muted">
-            Create an account to discover donation drives or manage community
+            Create an account to browse drives as a donor or manage community
             assistance as a partner organization.
           </p>
         </div>

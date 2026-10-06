@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  CalendarDays,
   LoaderCircle,
   MapPin,
   Package,
@@ -234,6 +235,16 @@ export default function DonorDrivesPage() {
                   )
                 : 0
 
+            const eventDate = drive.eventDate
+              ? new Date(
+                  `${String(drive.eventDate).slice(0, 10)}T00:00:00`,
+                ).toLocaleDateString(undefined, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : 'Date not specified'
+
             return (
               <article
                 className="drive-card"
@@ -261,6 +272,11 @@ export default function DonorDrivesPage() {
                   <span>
                     {drive.location}
                   </span>
+                </div>
+
+                <div className="drive-location">
+                  <CalendarDays size={16} />
+                  <span>{eventDate}</span>
                 </div>
 
                 <div className="drive-progress">

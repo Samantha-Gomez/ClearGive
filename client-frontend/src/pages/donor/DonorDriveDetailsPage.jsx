@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   ArrowLeft,
   Building2,
+  CalendarDays,
   LoaderCircle,
   MapPin,
   Package,
@@ -9,6 +10,22 @@ import {
 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
+
+const formatDriveDate = (value) => {
+  if (!value) return 'Not specified'
+
+  const datePart = String(value).slice(0, 10)
+  const [year, month, day] = datePart.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+
+  return Number.isNaN(date.getTime())
+    ? 'Not specified'
+    : date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+}
 
 export default function DonorDriveDetailsPage() {
   const { id } = useParams()
@@ -120,6 +137,11 @@ export default function DonorDriveDetailsPage() {
     drive.partner?.organizationName ||
     drive.partner?.fullName ||
     'Community Partner'
+  const requestedItems = Array.isArray(drive.requestedItems)
+    ? drive.requestedItems.filter(
+        (item) => item && typeof item.name === 'string',
+      )
+    : []
 
   return (
     <div className="page-shell">
@@ -211,6 +233,32 @@ export default function DonorDriveDetailsPage() {
                 <strong>
                   {drive.location}
                 </strong>
+              </div>
+            </div>
+
+            <div className="details-item">
+              <CalendarDays size={18} />
+              <div>
+                <span>Drive / event date</span>
+                <strong>{formatDriveDate(drive.eventDate)}</strong>
+              </div>
+            </div>
+
+            <div className="details-item">
+              <Package size={18} />
+              <div>
+                <span>Requested items</span>
+                {requestedItems.length > 0 ? (
+                  <ul>
+                    {requestedItems.map((item, index) => (
+                      <li key={`${item.name}-${index}`}>
+                        {item.name} - {item.quantity} needed
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <strong>Not specified</strong>
+                )}
               </div>
             </div>
 

@@ -1555,6 +1555,41 @@ a:focus-visible {
   margin: 0 auto;
 }
 
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.landing-nav-links > a:not(.primary-button, .secondary-button) {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.landing-nav-links > a:not(.primary-button, .secondary-button):hover {
+  color: var(--green-dark);
+  text-decoration: underline;
+}
+
+.landing-nav .primary-button,
+.landing-nav .secondary-button {
+  margin-top: 0;
+  text-decoration: none;
+}
+
 .landing-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
@@ -1688,7 +1723,7 @@ a:focus-visible {
 
 .landing-steps {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -2579,6 +2614,16 @@ a:focus-visible {
 }
 
 @media (max-width: 600px) {
+  .landing-nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .landing-nav-links {
+    justify-content: flex-start;
+    gap: 8px 12px;
+  }
+
   .landing-hero {
     padding-top: 10px;
   }

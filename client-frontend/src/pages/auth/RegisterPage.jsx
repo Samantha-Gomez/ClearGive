@@ -27,8 +27,11 @@ export default function RegisterPage() {
     }
     setSubmitting(true)
     try {
-      await register(form)
-      navigate('/login', { replace: true, state: { registered: true } })
+      const result = await register(form)
+      navigate('/verify-email', {
+        replace: true,
+        state: { email: result.user.email },
+      })
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -56,7 +59,7 @@ export default function RegisterPage() {
         {error && <div className="form-error" role="alert">{error}</div>}
         <form onSubmit={handleSubmit}>
           <label htmlFor="fullName">Full name</label>
-          <input id="fullName" name="fullName" value={form.fullName} onChange={updateField} minLength="2" required />
+          <input id="fullName" name="fullName" value={form.fullName} onChange={updateField} minLength="2" maxLength="100" required />
           <label htmlFor="email">Email address</label>
           <input id="email" name="email" type="email" autoComplete="email" value={form.email} onChange={updateField} required />
           <label htmlFor="contactNumber">Contact number</label>

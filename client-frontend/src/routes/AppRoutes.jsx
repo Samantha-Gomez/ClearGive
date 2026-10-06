@@ -4,6 +4,7 @@ import AppLayout from '../layouts/AppLayout'
 import DashboardPage from '../pages/dashboards/DashboardPage'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
+import VerifyEmailPage from '../pages/auth/VerifyEmailPage'
 import AdminAnalyticsPage from '../pages/admin/AdminAnalyticsPage'
 import AdminDashboard from '../pages/dashboards/AdminDashboard'
 import AdminActivityPage from '../pages/admin/AdminActivityPage'
@@ -15,6 +16,7 @@ import AdminVerificationPage from '../pages/admin/AdminVerificationPage'
 import DonorDashboard from '../pages/dashboards/DonorDashboard'
 import PartnerDashboard from '../pages/dashboards/PartnerDashboard'
 import PartnerDrivesPage from '../pages/partner/PartnerDrivesPage'
+import PartnerReportsPage from '../pages/partner/PartnerReportsPage'
 import PartnerCreateDrivePage from '../pages/partner/PartnerCreateDrivePage'
 import PartnerDriveDetailsPage from '../pages/partner/PartnerDriveDetailsPage'
 import PartnerEditDrivePage from '../pages/partner/PartnerEditDrivePage'
@@ -54,6 +56,7 @@ export default function AppRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Route>
 
       <Route element={<AppLayout />}>
@@ -93,6 +96,11 @@ export default function AppRoutes() {
           <Route
             path="/partner/drives"
             element={<PartnerDrivesPage />}
+          />
+
+          <Route
+            path="/partner/reports"
+            element={<PartnerReportsPage />}
           />
 
           <Route

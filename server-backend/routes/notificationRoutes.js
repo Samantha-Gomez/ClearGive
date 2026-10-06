@@ -8,11 +8,20 @@ const {
 
 const {
   authenticate,
+  authorizeConfiguredAdmin,
 } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.use(authenticate);
+const authorizeNotificationAccess = (req, res, next) => {
+  if (req.user.role === 'admin') {
+    return authorizeConfiguredAdmin(req, res, next);
+  }
+
+  next();
+};
+
+router.use(authenticate, authorizeNotificationAccess);
 
 router.get(
   '/',

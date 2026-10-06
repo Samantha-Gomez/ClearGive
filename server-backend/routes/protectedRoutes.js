@@ -2,12 +2,27 @@ const express = require('express');
 const {
   authenticate,
   authorize,
+  authorizeConfiguredAdmin,
 } = require('../middleware/authMiddleware');
 const {
   validateObjectId,
 } = require('../middleware/validation');
 
 const router = express.Router();
+
+const authorizeResourceOwnerOrAdmin = (req, res, next) => {
+  if (req.user.role === 'admin') {
+    return authorizeConfiguredAdmin(req, res, next);
+  }
+
+  if (req.user._id.toString() !== req.params.id) {
+    return res.status(403).json({
+      message: 'You do not have permission to access this record.',
+    });
+  }
+
+  next();
+};
 
 // Any authenticated ClearGive user.
 router.get('/dashboard', authenticate, (req, res) => {
@@ -65,18 +80,8 @@ router.get(
   '/resource/:id',
   authenticate,
   validateObjectId,
+  authorizeResourceOwnerOrAdmin,
   (req, res) => {
-    const isAdmin = req.user.role === 'admin';
-    const isOwner =
-      req.user._id.toString() === req.params.id;
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({
-        message:
-          'You do not have permission to access this record.',
-      });
-    }
-
     res.json({
       message: 'Resource access confirmed.',
       requestedId: req.params.id,

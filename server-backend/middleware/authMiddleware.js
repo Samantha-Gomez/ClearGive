@@ -64,6 +64,29 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const authorizeConfiguredAdmin = (req, res, next) => {
+  const configuredAdminEmail = (process.env.ADMIN_EMAIL || '')
+    .trim()
+    .toLowerCase();
+  const userEmail =
+    typeof req.user?.email === 'string'
+      ? req.user.email.trim().toLowerCase()
+      : '';
+
+  if (
+    !req.user ||
+    req.user.role !== 'admin' ||
+    !configuredAdminEmail ||
+    userEmail !== configuredAdminEmail
+  ) {
+    return res.status(403).json({
+      message: 'You do not have permission to access this resource.',
+    });
+  }
+
+  next();
+};
+
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     const roles = allowedRoles.flat();
@@ -74,6 +97,10 @@ const authorize = (...allowedRoles) => {
       });
     }
 
+    if (req.user.role === 'admin') {
+      return authorizeConfiguredAdmin(req, res, next);
+    }
+
     next();
   };
 };
@@ -81,4 +108,5 @@ const authorize = (...allowedRoles) => {
 module.exports = {
   authenticate,
   authorize,
+  authorizeConfiguredAdmin,
 };

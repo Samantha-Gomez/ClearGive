@@ -6,13 +6,15 @@ const {
   approveVerification,
   rejectVerification,
 } = require('../controllers/partnerVerificationController');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
-const { requireConfiguredAdmin } = require('../middleware/partnerVerificationMiddleware');
+const {
+  authenticate,
+  authorizeConfiguredAdmin,
+} = require('../middleware/authMiddleware');
 const { validateObjectId, validateRejectionRequest } = require('../middleware/validation');
 
 const router = express.Router();
 
-router.use(authenticate, authorize('admin'), requireConfiguredAdmin);
+router.use(authenticate, authorizeConfiguredAdmin);
 router.get('/', listVerifications);
 router.get(
   '/:id/documents/:documentType',

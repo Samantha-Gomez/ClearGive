@@ -21,6 +21,22 @@ const userSchema = new mongoose.Schema(
         'Please provide a valid email.',
       ],
     },
+    emailVerified: {
+      type: Boolean,
+      default: function emailVerifiedDefault() {
+        return this.isNew && ['donor', 'partner'].includes(this.role)
+          ? false
+          : undefined;
+      },
+    },
+    emailVerificationOtpHash: {
+      type: String,
+      select: false,
+    },
+    emailVerificationOtpExpiresAt: {
+      type: Date,
+      select: false,
+    },
     contactNumber: {
       type: String,
       required: true,

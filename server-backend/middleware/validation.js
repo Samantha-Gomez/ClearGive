@@ -47,6 +47,8 @@ const donationDriveFields = [
   'description',
   'category',
   'targetQuantity',
+  'eventDate',
+  'requestedItems',
   'location',
   'assistanceReference',
 ];
@@ -127,11 +129,11 @@ const validateRegistration = (req, res, next) => {
     !fullName ||
     typeof fullName !== 'string' ||
     fullName.trim().length < 2 ||
-    fullName.trim().length > 150
+    fullName.trim().length > 100
   ) {
     return sendValidationError(
       res,
-      'Full name is required and must be between 2 and 150 characters long.',
+      'Full name is required and must be between 2 and 100 characters long.',
     );
   }
 
@@ -242,6 +244,47 @@ const validateLogin = (req, res, next) => {
 
   req.body.email = email.trim().toLowerCase();
 
+  next();
+};
+
+const validateEmailVerification = (req, res, next) => {
+  const { email, otp } = req.body || {};
+
+  if (
+    typeof email !== 'string' ||
+    !isValidEmail(email.trim())
+  ) {
+    return sendValidationError(
+      res,
+      'Please provide a valid email address.',
+    );
+  }
+
+  if (typeof otp !== 'string' || !/^\d{6}$/.test(otp)) {
+    return sendValidationError(
+      res,
+      'Verification code must contain exactly 6 digits.',
+    );
+  }
+
+  req.body.email = email.trim().toLowerCase();
+  next();
+};
+
+const validateEmailVerificationResend = (req, res, next) => {
+  const { email } = req.body || {};
+
+  if (
+    typeof email !== 'string' ||
+    !isValidEmail(email.trim())
+  ) {
+    return sendValidationError(
+      res,
+      'Please provide a valid email address.',
+    );
+  }
+
+  req.body.email = email.trim().toLowerCase();
   next();
 };
 
@@ -397,6 +440,75 @@ const validateDonationDriveFields = (
     if (error) {
       return error;
     }
+  }
+
+  if (requireAll || body.eventDate !== undefined) {
+    const value = body.eventDate;
+    const date =
+      typeof value === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T00:00:00.000Z`)
+        : null;
+
+    if (
+      !date ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== value
+    ) {
+      return 'eventDate must be a valid date in YYYY-MM-DD format.';
+    }
+
+    body.eventDate = date;
+  }
+
+  if (requireAll || body.requestedItems !== undefined) {
+    if (
+      !Array.isArray(body.requestedItems) ||
+      body.requestedItems.length < 1 ||
+      body.requestedItems.length > 50
+    ) {
+      return 'requestedItems must contain between 1 and 50 items.';
+    }
+
+    for (const [index, item] of body.requestedItems.entries()) {
+      if (
+        !item ||
+        typeof item !== 'object' ||
+        Array.isArray(item)
+      ) {
+        return `requestedItems[${index}] must be an item object.`;
+      }
+
+      const unknownItemField = Object.keys(item).find(
+        (field) => !['name', 'quantity'].includes(field),
+      );
+
+      if (unknownItemField) {
+        return `requestedItems[${index}].${unknownItemField} is not accepted.`;
+      }
+
+      if (
+        typeof item.name !== 'string' ||
+        item.name.trim().length < 1 ||
+        item.name.trim().length > 150
+      ) {
+        return `requestedItems[${index}].name must be between 1 and 150 characters.`;
+      }
+
+      const quantityError = validatePositiveInteger(
+        item.quantity,
+        `requestedItems[${index}].quantity`,
+      );
+
+      if (quantityError) {
+        return quantityError;
+      }
+    }
+
+    body.requestedItems = body.requestedItems.map((item) => ({
+      name: item.name.trim(),
+      quantity: item.quantity,
+    }));
   }
 
   if (body.assistanceReference !== undefined) {
@@ -1050,6 +1162,8 @@ const validateRejectionRequest = (
 module.exports = {
   validateRegistration,
   validateLogin,
+  validateEmailVerification,
+  validateEmailVerificationResend,
   validateObjectId,
   validatePartnerVerificationSubmission,
   validatePartnerVerificationResubmission,

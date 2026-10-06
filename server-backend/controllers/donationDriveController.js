@@ -13,6 +13,8 @@ const editableDriveFields = [
   'description',
   'category',
   'targetQuantity',
+  'eventDate',
+  'requestedItems',
   'location',
   'assistanceReference',
 ];
@@ -40,6 +42,9 @@ const driveStatusTransitions = {
 
 const isValidObjectId = (value) =>
   mongoose.Types.ObjectId.isValid(value);
+
+const escapeRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const ensureBodyObject = (body) =>
   body &&
@@ -104,6 +109,10 @@ const serializeDrive = (drive) => {
     description: drive.description,
     category: drive.category,
     targetQuantity: drive.targetQuantity,
+    eventDate: drive.eventDate || null,
+    requestedItems: Array.isArray(drive.requestedItems)
+      ? drive.requestedItems
+      : [],
     location: drive.location,
     assistanceReference:
       drive.assistanceReference || null,
@@ -467,14 +476,14 @@ const buildPublicDriveFilter = async (
 
   if (query.location) {
     filter.location = {
-      $regex: query.location,
+      $regex: escapeRegex(query.location),
       $options: 'i',
     };
   }
 
   if (query.q) {
     const search = {
-      $regex: query.q,
+      $regex: escapeRegex(query.q),
       $options: 'i',
     };
 

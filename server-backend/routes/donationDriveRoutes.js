@@ -10,8 +10,14 @@ const {
   validateObjectId,
   validatePublicDriveQuery,
 } = require('../middleware/validation')
+const {
+  authenticate,
+  authorize,
+} = require('../middleware/authMiddleware')
 
 const router = express.Router()
+
+router.use(authenticate, authorize('donor'))
 
 router.get(
   '/',

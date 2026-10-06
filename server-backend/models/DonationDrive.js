@@ -1,5 +1,26 @@
 const mongoose = require('mongoose');
 
+const requestedItemSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      trim: true,
+      minlength: 1,
+      maxlength: 150,
+    },
+    quantity: {
+      type: Number,
+      min: 1,
+      max: 100000000,
+      validate: {
+        validator: Number.isInteger,
+        message: 'Requested item quantity must be a positive integer.',
+      },
+    },
+  },
+  { _id: false },
+);
+
 const donationDriveSchema = new mongoose.Schema(
   {
     partnerId: {
@@ -37,6 +58,13 @@ const donationDriveSchema = new mongoose.Schema(
         validator: Number.isInteger,
         message: 'targetQuantity must be a positive integer.',
       },
+    },
+    eventDate: {
+      type: Date,
+    },
+    requestedItems: {
+      type: [requestedItemSchema],
+      default: undefined,
     },
     location: {
       type: String,

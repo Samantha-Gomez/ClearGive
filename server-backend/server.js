@@ -16,6 +16,7 @@ const adminPartnerVerificationRoutes = require('./routes/adminPartnerVerificatio
 const donationDriveRoutes = require('./routes/donationDriveRoutes');
 const donationRoutes = require('./routes/donationRoutes');
 const partnerDriveRoutes = require('./routes/partnerDriveRoutes');
+const partnerReportRoutes = require('./routes/partnerReportRoutes');
 const adminDriveRoutes = require('./routes/adminDriveRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const distributionRoutes = require('./routes/distributionRoutes');
@@ -27,9 +28,28 @@ const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const productionFrontendOrigin = 'https://clear-give-seven.vercel.app';
+const allowedOrigins = new Set([
+  productionFrontendOrigin,
+  ...(process.env.NODE_ENV === 'production'
+    ? []
+    : ['http://localhost:5173', 'http://127.0.0.1:5173']),
+]);
 
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      const error = new Error('Origin is not allowed by CORS.');
+      error.statusCode = 403;
+      return callback(error);
+    },
+  }),
+);
 app.use(express.json({ limit: '1mb' }));
 app.use(generalLimiter);
 
@@ -57,6 +77,7 @@ app.use('/api/admin/drives', adminDriveRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/distributions', distributionRoutes);
 app.use('/api/partner/drives', partnerDriveRoutes);
+app.use('/api/partner/reports', partnerReportRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);

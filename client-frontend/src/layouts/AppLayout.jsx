@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Activity,
   BarChart3,
+  FileSpreadsheet,
   HeartHandshake,
   LayoutDashboard,
   LogOut,
@@ -13,7 +14,7 @@ import {
   Sun,
   Truck,
 } from 'lucide-react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import NotificationBell from '../components/notifications/NotificationBell'
 import { roleLabels } from '../routes/routeUtils'
@@ -47,6 +48,11 @@ const navigation = {
       label: 'My Drives',
       to: '/partner/drives',
       icon: Store,
+    },
+    {
+      label: 'Reports',
+      to: '/partner/reports',
+      icon: FileSpreadsheet,
     },
     {
       label: 'Verification',
@@ -105,10 +111,8 @@ const navigation = {
 }
 
 export default function AppLayout() {
-  const { user, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
   const navigate = useNavigate()
-
-  const links = navigation[user.role] || []
 
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('cleargive_theme') || 'light'
@@ -133,6 +137,16 @@ export default function AppLayout() {
         : 'dark',
     )
   }
+
+  if (loading) {
+    return <div className="page-state">Restoring your session...</div>
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  const links = navigation[user.role] || []
 
   const handleLogout = () => {
     logout()

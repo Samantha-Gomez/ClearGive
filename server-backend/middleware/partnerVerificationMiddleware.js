@@ -10,17 +10,6 @@ const requireApprovedPartner = (req, res, next) => {
   next();
 };
 
-const requireConfiguredAdmin = (req, res, next) => {
-  const configuredAdminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-
-  if (!req.user || req.user.role !== 'admin' || !configuredAdminEmail || req.user.email !== configuredAdminEmail) {
-    return res.status(403).json({ message: 'You do not have permission to review partner verifications.' });
-  }
-
-  next();
-};
-
 module.exports = {
   requireApprovedPartner,
-  requireConfiguredAdmin,
 };

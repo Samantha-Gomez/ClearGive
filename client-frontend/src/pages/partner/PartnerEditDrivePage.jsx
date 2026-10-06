@@ -3,6 +3,8 @@ import {
   ArrowLeft,
   CheckCircle,
   LoaderCircle,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
@@ -22,6 +24,8 @@ const initialForm = {
   category: '',
   targetQuantity: '',
   location: '',
+  eventDate: '',
+  requestedItems: [],
   assistanceReference: '',
 }
 
@@ -70,6 +74,15 @@ export default function PartnerEditDrivePage() {
               drive.targetQuantity ?? '',
             location:
               drive.location || '',
+            eventDate: drive.eventDate
+              ? String(drive.eventDate).slice(0, 10)
+              : '',
+            requestedItems: Array.isArray(drive.requestedItems)
+              ? drive.requestedItems.map((item) => ({
+                  name: item.name || '',
+                  quantity: item.quantity ?? '',
+                }))
+              : [],
             assistanceReference:
               drive.assistanceReference ||
               '',
@@ -120,6 +133,32 @@ export default function PartnerEditDrivePage() {
     }
   }
 
+  const updateRequestedItem = (index, field, value) => {
+    setForm((current) => ({
+      ...current,
+      requestedItems: current.requestedItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    }))
+    setError('')
+  }
+
+  const addRequestedItem = () => {
+    setForm((current) => ({
+      ...current,
+      requestedItems: [...current.requestedItems, { name: '', quantity: '' }],
+    }))
+  }
+
+  const removeRequestedItem = (index) => {
+    setForm((current) => ({
+      ...current,
+      requestedItems: current.requestedItems.filter(
+        (_, itemIndex) => itemIndex !== index,
+      ),
+    }))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
 
@@ -139,6 +178,11 @@ export default function PartnerEditDrivePage() {
     const targetQuantity = Number(
       form.targetQuantity,
     )
+    const eventDate = form.eventDate.trim()
+    const requestedItems = form.requestedItems.map((item) => ({
+      name: item.name.trim(),
+      quantity: Number(item.quantity),
+    }))
 
     if (
       title.length < 3 ||
@@ -187,6 +231,29 @@ export default function PartnerEditDrivePage() {
     }
 
     if (
+      eventDate &&
+      (!Number.isFinite(new Date(`${eventDate}T00:00:00.000Z`).getTime()) ||
+        new Date(`${eventDate}T00:00:00.000Z`).toISOString().slice(0, 10) !== eventDate)
+    ) {
+      setError('Please enter a valid drive/event date.')
+      return
+    }
+
+    if (
+      requestedItems.some(
+        (item) =>
+          !item.name ||
+          item.name.length > 150 ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1 ||
+          item.quantity > 100000000,
+      )
+    ) {
+      setError('Each requested item needs a name and a positive whole-number quantity.')
+      return
+    }
+
+    if (
       driveStatus === 'completed' ||
       driveStatus === 'cancelled'
     ) {
@@ -199,21 +266,23 @@ export default function PartnerEditDrivePage() {
     setSubmitting(true)
 
     try {
+      const updates = {
+        title,
+        description,
+        category: form.category,
+        targetQuantity,
+        location,
+        assistanceReference: assistanceReference || undefined,
+      }
+
+      if (eventDate) updates.eventDate = eventDate
+      if (requestedItems.length) updates.requestedItems = requestedItems
+
       await apiRequest(
         `/partner/drives/${id}`,
         {
           method: 'PATCH',
-          body: {
-            title,
-            description,
-            category:
-              form.category,
-            targetQuantity,
-            location,
-            assistanceReference:
-              assistanceReference ||
-              undefined,
-          },
+          body: updates,
         },
       )
 
@@ -447,6 +516,87 @@ export default function PartnerEditDrivePage() {
                   items needed.
                 </span>
               </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="eventDate">
+                Drive / Event Date
+              </label>
+              <input
+                id="eventDate"
+                name="eventDate"
+                type="date"
+                value={form.eventDate}
+                onChange={handleChange}
+                disabled={submitting || isLocked}
+              />
+              {!form.eventDate && (
+                <span className="field-hint">
+                  No event date is stored for this drive yet.
+                </span>
+              )}
+            </div>
+
+            <div className="form-group requested-items-form-group">
+              <div>
+                <label>Requested Items</label>
+                <p className="field-hint">
+                  Add the items and quantities donors should bring. Leave empty to preserve this older drive's existing data.
+                </p>
+              </div>
+              {form.requestedItems.map((item, index) => (
+                <div className="form-row requested-item-row" key={index}>
+                  <div className="form-group">
+                    <label htmlFor={`requested-item-${index}`}>Item name</label>
+                    <input
+                      id={`requested-item-${index}`}
+                      type="text"
+                      value={item.name}
+                      onChange={(event) => updateRequestedItem(index, 'name', event.target.value)}
+                      maxLength={150}
+                      placeholder="Example: Notebooks"
+                      required
+                      disabled={submitting || isLocked}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor={`requested-quantity-${index}`}>Quantity needed</label>
+                    <input
+                      id={`requested-quantity-${index}`}
+                      type="number"
+                      value={item.quantity}
+                      onChange={(event) => updateRequestedItem(index, 'quantity', event.target.value)}
+                      min="1"
+                      max="100000000"
+                      step="1"
+                      placeholder="Example: 100"
+                      required
+                      disabled={submitting || isLocked}
+                    />
+                  </div>
+                  {form.requestedItems.length > 1 && (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => removeRequestedItem(index)}
+                      aria-label={`Remove requested item ${index + 1}`}
+                      disabled={submitting || isLocked}
+                    >
+                      <Trash2 size={16} />
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={addRequestedItem}
+                disabled={submitting || isLocked || form.requestedItems.length >= 50}
+              >
+                <Plus size={17} />
+                Add requested item
+              </button>
             </div>
 
             <div className="form-group">
