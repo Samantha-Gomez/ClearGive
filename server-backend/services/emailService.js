@@ -105,4 +105,5 @@ const sendEmailVerificationOtp = ({ to, otp }) => {
 module.exports = {
   sendEmail,
   sendEmailVerificationOtp,
+  sendPasswordResetOtp,
 };

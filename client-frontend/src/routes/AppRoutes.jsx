@@ -3,6 +3,7 @@ import { useAuth } from '../context/useAuth'
 import AppLayout from '../layouts/AppLayout'
 import DashboardPage from '../pages/dashboards/DashboardPage'
 import LoginPage from '../pages/auth/LoginPage'
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import VerifyEmailPage from '../pages/auth/VerifyEmailPage'
 import AdminAnalyticsPage from '../pages/admin/AdminAnalyticsPage'
@@ -55,6 +56,7 @@ export default function AppRoutes() {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Route>

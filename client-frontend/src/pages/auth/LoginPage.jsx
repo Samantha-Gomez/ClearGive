@@ -48,6 +48,9 @@ export default function LoginPage() {
           <input id="email" name="email" type="email" autoComplete="email" value={form.email} onChange={updateField} required />
           <label htmlFor="password">Password</label>
           <input id="password" name="password" type="password" autoComplete="current-password" value={form.password} onChange={updateField} minLength="8" required />
+          <p className="auth-footer">
+          <Link to="/forgot-password">Forgot password?</Link>
+          </p>
           <button className="primary-button" type="submit" disabled={submitting}>
             <LogIn size={18} />
             {submitting ? 'Signing in...' : 'Sign in'}

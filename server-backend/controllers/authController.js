@@ -3,9 +3,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { logActivity } = require('../utils/activityLogger');
-const { sendEmailVerificationOtp } = require('../services/emailService');
+const {
+  sendEmailVerificationOtp,
+  sendPasswordResetOtp,
+} = require('../services/emailService');
 
 const emailVerificationLifetimeMs = 10 * 60 * 1000;
+const passwordResetLifetimeMs = 10 * 60 * 1000;
 const publicRegistrationRoles = ['donor', 'partner'];
 
 const generateEmailOtp = () =>
@@ -186,6 +190,142 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+const forgotPassword = async (req, res, next) => {
+  try {
+    const email = req.body.email.trim().toLowerCase();
+
+    const responseMessage =
+      'If an account exists for this email, a password reset code has been sent.';
+
+    const user = await User.findOne({
+      email,
+      status: 'active',
+    });
+
+    if (!user) {
+      return res.json({ message: responseMessage });
+    }
+
+    const otp = generateEmailOtp();
+    const otpHash = await bcrypt.hash(otp, 12);
+    const expiresAt = new Date(
+      Date.now() + passwordResetLifetimeMs,
+    );
+
+    const result = await User.updateOne(
+      {
+        _id: user._id,
+        status: 'active',
+      },
+      {
+        $set: {
+          passwordResetOtpHash: otpHash,
+          passwordResetOtpExpiresAt: expiresAt,
+        },
+      },
+    );
+
+    if (result.matchedCount !== 1) {
+      return res.json({ message: responseMessage });
+    }
+
+    await sendPasswordResetOtp({
+      to: user.email,
+      otp,
+    });
+
+    return res.json({ message: responseMessage });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const email = req.body.email.trim().toLowerCase();
+    const { otp, password } = req.body;
+
+    const user = await User.findOne({
+      email,
+      status: 'active',
+    }).select(
+      '+passwordResetOtpHash +passwordResetOtpExpiresAt',
+    );
+
+    if (
+      !user ||
+      !user.passwordResetOtpHash ||
+      !user.passwordResetOtpExpiresAt
+    ) {
+      return res.status(400).json({
+        message: 'Invalid or expired password reset code.',
+      });
+    }
+
+    const now = new Date();
+
+    if (user.passwordResetOtpExpiresAt <= now) {
+      return res.status(410).json({
+        message: 'This password reset code has expired. Request a new code.',
+      });
+    }
+
+    const isOtpValid = await bcrypt.compare(
+      otp,
+      user.passwordResetOtpHash,
+    );
+
+    if (!isOtpValid) {
+      return res.status(400).json({
+        message: 'Incorrect password reset code.',
+      });
+    }
+
+    const newPasswordHash = await bcrypt.hash(password, 12);
+
+    const result = await User.updateOne(
+      {
+        _id: user._id,
+        status: 'active',
+        passwordResetOtpHash: user.passwordResetOtpHash,
+        passwordResetOtpExpiresAt: { $gt: now },
+      },
+      {
+        $set: {
+          password: newPasswordHash,
+          passwordChangedAt: now,
+        },
+        $unset: {
+          passwordResetOtpHash: 1,
+          passwordResetOtpExpiresAt: 1,
+        },
+      },
+    );
+
+    if (result.matchedCount !== 1) {
+      return res.status(400).json({
+        message: 'This password reset code is invalid, expired, or already used.',
+      });
+    }
+
+    await logActivity({
+      user: user._id,
+      role: user.role,
+      action: 'password_reset',
+      resourceType: 'User',
+      resourceId: user._id.toString(),
+      details: 'User reset their password using a password reset code.',
+      result: 'success',
+    });
+
+    return res.json({
+      message: 'Password reset successfully. You can now log in with your new password.',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const verifyEmail = async (req, res, next) => {
   try {
     const email = req.body.email.trim().toLowerCase();
@@ -324,6 +464,8 @@ const getCurrentUser = async (req, res, next) => {
 module.exports = {
   registerUser,
   loginUser,
+  forgotPassword,
+  resetPassword,
   verifyEmail,
   resendEmailVerification,
   getCurrentUser,

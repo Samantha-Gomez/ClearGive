@@ -37,6 +37,14 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    passwordResetOtpHash: {
+    type: String,
+    select: false,
+    },
+    passwordResetOtpExpiresAt: {
+      type: Date,
+      select: false,
+    },
     contactNumber: {
       type: String,
       required: true,

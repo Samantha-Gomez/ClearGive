@@ -247,6 +247,75 @@ const validateLogin = (req, res, next) => {
   next();
 };
 
+const validateForgotPassword = (req, res, next) => {
+  const { email } = req.body || {};
+
+  if (
+    typeof email !== 'string' ||
+    !isValidEmail(email.trim())
+  ) {
+    return sendValidationError(
+      res,
+      'Please provide a valid email address.',
+    );
+  }
+
+  req.body.email = email.trim().toLowerCase();
+
+  next();
+};
+
+const validatePasswordReset = (req, res, next) => {
+  const {
+    email,
+    otp,
+    password,
+    confirmPassword,
+  } = req.body || {};
+
+  if (
+    typeof email !== 'string' ||
+    !isValidEmail(email.trim())
+  ) {
+    return sendValidationError(
+      res,
+      'Please provide a valid email address.',
+    );
+  }
+
+  if (
+    typeof otp !== 'string' ||
+    !/^\d{6}$/.test(otp)
+  ) {
+    return sendValidationError(
+      res,
+      'Password reset code must contain exactly 6 digits.',
+    );
+  }
+
+  if (
+    typeof password !== 'string' ||
+    password.length < 8 ||
+    password.length > 128
+  ) {
+    return sendValidationError(
+      res,
+      'Password must be between 8 and 128 characters long.',
+    );
+  }
+
+  if (password !== confirmPassword) {
+    return sendValidationError(
+      res,
+      'Password and confirm password do not match.',
+    );
+  }
+
+  req.body.email = email.trim().toLowerCase();
+
+  next();
+};
+
 const validateEmailVerification = (req, res, next) => {
   const { email, otp } = req.body || {};
 
@@ -1162,6 +1231,8 @@ const validateRejectionRequest = (
 module.exports = {
   validateRegistration,
   validateLogin,
+  validateForgotPassword,
+  validatePasswordReset,
   validateEmailVerification,
   validateEmailVerificationResend,
   validateObjectId,
