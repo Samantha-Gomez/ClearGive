@@ -102,6 +102,45 @@ const sendEmailVerificationOtp = ({ to, otp }) => {
   return sendEmail({ to, subject, text, html });
 };
 
+const sendPasswordResetOtp = ({ to, otp }) => {
+  if (typeof otp !== 'string' || !/^\d{6}$/.test(otp)) {
+    throw new Error('Password reset code must contain exactly 6 digits.')
+  }
+
+  const subject = 'Reset your password - ClearGive'
+
+  const text = [
+    'ClearGive',
+    '',
+    'Password reset request',
+    '',
+    `Your 6-digit password reset code is: ${otp}`,
+    '',
+    `This code expires in ${OTP_EXPIRATION_MINUTES} minutes.`,
+    'If you did not request a password reset, you can ignore this email.',
+    'Do not share this code with anyone.',
+  ].join('\n')
+
+  const html = [
+    '<div style="font-family:Arial,sans-serif;line-height:1.5;color:#202827">',
+    '<p><strong>ClearGive</strong></p>',
+    '<h1 style="font-size:22px">Reset your password</h1>',
+    '<p>Your 6-digit password reset code is:</p>',
+    `<p style="font-size:28px;font-weight:700;letter-spacing:4px">${otp}</p>`,
+    `<p>This code expires in ${OTP_EXPIRATION_MINUTES} minutes.</p>`,
+    '<p>If you did not request a password reset, you can ignore this email.</p>',
+    '<p>Do not share this code with anyone.</p>',
+    '</div>',
+  ].join('')
+
+  return sendEmail({
+    to,
+    subject,
+    text,
+    html,
+  })
+}
+
 module.exports = {
   sendEmail,
   sendEmailVerificationOtp,
