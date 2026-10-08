@@ -10,6 +10,21 @@ import {
   Truck,
   Users,
 } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from 'recharts'
 import DashboardStat from '../../components/dashboard/DashboardStat'
 import UnavailablePanel from '../../components/dashboard/UnavailablePanel'
 import { apiRequest } from '../../services/api'
@@ -43,15 +58,6 @@ function formatMonth(value) {
   })
 }
 
-function getBarHeight(value, maximum) {
-  if (!maximum || !value) return '0%'
-
-  return `${Math.max(
-    (value / maximum) * 100,
-    4,
-  )}%`
-}
-
 function getFulfillmentPercentage(target, distributed) {
   const targetValue = Number(target || 0)
   const distributedValue = Number(distributed || 0)
@@ -65,6 +71,27 @@ function getFulfillmentPercentage(target, distributed) {
     100,
   )
 }
+
+function formatStatus(value) {
+  if (!value) return ''
+
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1)
+  )
+}
+
+const STATUS_COLORS = [
+  '#2f8f58',
+  '#e0a43a',
+  '#6b7c73',
+  '#b64d49',
+]
+
+const CHART_GREEN = '#2f8f58'
+const CHART_DARK_GREEN = '#247044'
+const CHART_GRID = '#dfe9e2'
+const CHART_TEXT = '#68766e'
 
 export default function AdminAnalyticsPage() {
   const [analytics, setAnalytics] = useState(null)
@@ -178,15 +205,38 @@ export default function AdminAnalyticsPage() {
   const statusBreakdown =
     analytics.statusBreakdown || {}
 
-  const monthlyMaximum = Math.max(
-    ...monthlyActivity.map((item) =>
-      Math.max(
-        Number(item.donated || 0),
-        Number(item.distributed || 0),
+  /*
+   * Prepare monthly chart data.
+   */
+  const monthlyChartData = monthlyActivity.map(
+    (item) => ({
+      month: formatMonth(item.month),
+      recorded: Number(item.donated || 0),
+      distributed: Number(
+        item.distributed || 0,
       ),
-    ),
-    0,
+    }),
   )
+
+  /*
+   * Prepare drive status chart data.
+   */
+  const statusChartData = Object.entries(
+    statusBreakdown,
+  ).map(([status, count]) => ({
+    name: formatStatus(status),
+    value: Number(count || 0),
+  }))
+
+  /*
+   * Prepare category chart data.
+   */
+  const categoryChartData = Object.entries(
+    categoryBreakdown,
+  ).map(([category, count]) => ({
+    name: category,
+    drives: Number(count || 0),
+  }))
 
   return (
     <section className="dashboard-page analytics-page">
@@ -232,6 +282,8 @@ export default function AdminAnalyticsPage() {
           {error}
         </div>
       )}
+
+      {/* SUMMARY NUMBERS */}
 
       <div className="dashboard-stats analytics-stats">
         <DashboardStat
@@ -299,14 +351,18 @@ export default function AdminAnalyticsPage() {
         />
       </div>
 
+      {/* CHARTS */}
+
       <div className="analytics-grid">
-        <div className="analytics-card analytics-monthly-card">
+        {/* MONTHLY ACTIVITY */}
+
+        <div className="analytics-card analytics-chart-card analytics-monthly-card">
           <div className="analytics-card-heading">
             <div>
-              <h2>Monthly activity</h2>
+              <h2>Monthly donation activity</h2>
 
               <p>
-                Donated and distributed
+                Recorded and distributed
                 items over time.
               </p>
             </div>
@@ -314,80 +370,105 @@ export default function AdminAnalyticsPage() {
             <BarChart3 size={20} />
           </div>
 
-          {monthlyActivity.length === 0 ? (
+          {monthlyChartData.length === 0 ? (
             <div className="analytics-empty">
               No monthly activity
               recorded yet.
             </div>
           ) : (
-            <div className="monthly-chart">
-              {monthlyActivity.map(
-                (item) => (
-                  <div
-                    className="monthly-chart-column"
-                    key={item.month}
-                  >
-                    <div className="monthly-chart-bars">
-                      <div
-                        className="chart-bar donated"
-                        style={{
-                          height:
-                            getBarHeight(
-                              Number(
-                                item.donated ||
-                                  0,
-                              ),
-                              monthlyMaximum,
-                            ),
-                        }}
-                        title={`Recorded: ${formatNumber(
-                          item.donated,
-                        )}`}
-                      />
+            <div className="analytics-chart">
+              <ResponsiveContainer
+                width="100%"
+                height={300}
+              >
+                <LineChart
+                  data={monthlyChartData}
+                  margin={{
+                    top: 10,
+                    right: 10,
+                    left: -15,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid
+                    stroke={CHART_GRID}
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
 
-                      <div
-                        className="chart-bar distributed"
-                        style={{
-                          height:
-                            getBarHeight(
-                              Number(
-                                item.distributed ||
-                                  0,
-                              ),
-                              monthlyMaximum,
-                            ),
-                        }}
-                        title={`Distributed: ${formatNumber(
-                          item.distributed,
-                        )}`}
-                      />
-                    </div>
+                  <XAxis
+                    dataKey="month"
+                    tick={{
+                      fill: CHART_TEXT,
+                      fontSize: 12,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
 
-                    <span>
-                      {formatMonth(
-                        item.month,
-                      )}
-                    </span>
-                  </div>
-                ),
-              )}
-            </div>
-          )}
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{
+                      fill: CHART_TEXT,
+                      fontSize: 12,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
 
-          {monthlyActivity.length > 0 && (
-            <div className="analytics-legend">
-              <span>
-                <i className="legend-dot donated" />
-                Recorded
-              </span>
+                  <Tooltip
+                    formatter={(value) =>
+                      formatNumber(value)
+                    }
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: '1px solid var(--line)',
+                      background:
+                        'var(--surface)',
+                      color: 'var(--ink)',
+                      boxShadow:
+                        'var(--shadow-sm)',
+                    }}
+                  />
 
-              <span>
-                <i className="legend-dot distributed" />
-                Distributed
-              </span>
+                  <Legend />
+
+                  <Line
+                    type="monotone"
+                    dataKey="recorded"
+                    name="Recorded"
+                    stroke={CHART_GREEN}
+                    strokeWidth={3}
+                    dot={{
+                      r: 4,
+                      fill: CHART_GREEN,
+                    }}
+                    activeDot={{
+                      r: 6,
+                    }}
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="distributed"
+                    name="Distributed"
+                    stroke={CHART_DARK_GREEN}
+                    strokeWidth={3}
+                    dot={{
+                      r: 4,
+                      fill: CHART_DARK_GREEN,
+                    }}
+                    activeDot={{
+                      r: 6,
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
+
+        {/* DISTRIBUTION DELAY */}
 
         <div className="analytics-card">
           <div className="analytics-card-heading">
@@ -444,7 +525,9 @@ export default function AdminAnalyticsPage() {
           </div>
         </div>
 
-        <div className="analytics-card">
+        {/* DRIVE STATUS PIE CHART */}
+
+        <div className="analytics-card analytics-chart-card">
           <div className="analytics-card-heading">
             <div>
               <h2>Drive status</h2>
@@ -456,32 +539,68 @@ export default function AdminAnalyticsPage() {
             </div>
           </div>
 
-          <div className="analytics-breakdown">
-            {Object.entries(
-              statusBreakdown,
-            ).map(
-              ([status, count]) => (
-                <div
-                  className="analytics-breakdown-row"
-                  key={status}
-                >
-                  <span>
-                    {status
-                      .charAt(0)
-                      .toUpperCase() +
-                      status.slice(1)}
-                  </span>
+          {statusChartData.length === 0 ? (
+            <div className="analytics-empty">
+              No drive status data
+              recorded yet.
+            </div>
+          ) : (
+            <div className="analytics-pie-chart">
+              <ResponsiveContainer
+                width="100%"
+                height={280}
+              >
+                <PieChart>
+                  <Pie
+                    data={statusChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={3}
+                  >
+                    {statusChartData.map(
+                      (entry, index) => (
+                        <Cell
+                          key={`status-${entry.name}`}
+                          fill={
+                            STATUS_COLORS[
+                              index %
+                                STATUS_COLORS.length
+                            ]
+                          }
+                        />
+                      ),
+                    )}
+                  </Pie>
 
-                  <strong>
-                    {formatNumber(count)}
-                  </strong>
-                </div>
-              ),
-            )}
-          </div>
+                  <Tooltip
+                    formatter={(value) =>
+                      formatNumber(value)
+                    }
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: '1px solid var(--line)',
+                      background:
+                        'var(--surface)',
+                      color: 'var(--ink)',
+                      boxShadow:
+                        'var(--shadow-sm)',
+                    }}
+                  />
+
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
-        <div className="analytics-card">
+        {/* DRIVE CATEGORY BAR CHART */}
+
+        <div className="analytics-card analytics-chart-card">
           <div className="analytics-card-heading">
             <div>
               <h2>Drive categories</h2>
@@ -493,35 +612,89 @@ export default function AdminAnalyticsPage() {
             </div>
           </div>
 
-          <div className="analytics-breakdown">
-            {Object.entries(
-              categoryBreakdown,
-            ).map(
-              ([category, count]) => (
-                <div
-                  className="analytics-breakdown-row"
-                  key={category}
+          {categoryChartData.length === 0 ? (
+            <div className="analytics-empty">
+              No drive categories
+              recorded yet.
+            </div>
+          ) : (
+            <div className="analytics-chart">
+              <ResponsiveContainer
+                width="100%"
+                height={300}
+              >
+                <BarChart
+                  data={categoryChartData}
+                  margin={{
+                    top: 10,
+                    right: 10,
+                    left: -15,
+                    bottom: 45,
+                  }}
                 >
-                  <span>{category}</span>
+                  <CartesianGrid
+                    stroke={CHART_GRID}
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
 
-                  <strong>
-                    {formatNumber(count)}
-                  </strong>
-                </div>
-              ),
-            )}
+                  <XAxis
+                    dataKey="name"
+                    tick={{
+                      fill: CHART_TEXT,
+                      fontSize: 11,
+                    }}
+                    angle={-35}
+                    textAnchor="end"
+                    interval={0}
+                    axisLine={false}
+                    tickLine={false}
+                  />
 
-            {Object.keys(
-              categoryBreakdown,
-            ).length === 0 && (
-              <div className="analytics-empty">
-                No drive categories
-                recorded yet.
-              </div>
-            )}
-          </div>
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{
+                      fill: CHART_TEXT,
+                      fontSize: 12,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+
+                  <Tooltip
+                    formatter={(value) =>
+                      formatNumber(value)
+                    }
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: '1px solid var(--line)',
+                      background:
+                        'var(--surface)',
+                      color: 'var(--ink)',
+                      boxShadow:
+                        'var(--shadow-sm)',
+                    }}
+                  />
+
+                  <Bar
+                    dataKey="drives"
+                    name="Drives"
+                    fill={CHART_GREEN}
+                    radius={[
+                      6,
+                      6,
+                      0,
+                      0,
+                    ]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* DRIVE PERFORMANCE */}
 
       <div className="analytics-card analytics-table-card">
         <div className="analytics-card-heading">

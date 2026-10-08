@@ -1,10 +1,13 @@
+import { useEffect, useState } from 'react'
 import {
   ArrowRight,
   Building2,
   CheckCircle2,
   HeartHandshake,
+  Moon,
   Package,
   ShieldCheck,
+  Sun,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -41,26 +44,69 @@ const steps = [
 ]
 
 export default function DashboardPage() {
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('cleargive_theme') || 'light',
+  )
+
+  useEffect(() => {
+    document.documentElement.classList.toggle(
+      'dark',
+      theme === 'dark',
+    )
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) =>
+      currentTheme === 'dark'
+        ? 'light'
+        : 'dark',
+    )
+  }
+
   return (
-    <main className="landing-page">
-      <header className="landing-nav">
-        <Link className="brand" to="/" aria-label="ClearGive home">
-          <span className="brand-mark">
-            <HeartHandshake size={21} />
-          </span>
-          <span>ClearGive</span>
-        </Link>
+  <>
+  <header className="landing-nav">
+    <div className="landing-nav-inner">
+      <Link className="brand" to="/" aria-label="ClearGive home">
+        <span className="brand-mark">
+          <HeartHandshake size={21} />
+        </span>
+        <span>ClearGive</span>
+      </Link>
 
-        <nav className="landing-nav-links" aria-label="Landing page navigation">
-          <a href="#what-is-cleargive">What is ClearGive?</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#contact">Contact</a>
-          <Link className="secondary-button" to="/login">Login</Link>
-          <Link className="primary-button" to="/register">Register</Link>
-        </nav>
-      </header>
+      <nav className="landing-nav-links" aria-label="Landing page navigation">
+        <a href="#what-is-cleargive">What is ClearGive?</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#contact">Contact</a>
+        <button
+          type="button"
+          className="theme-toggle-button"
+          onClick={toggleTheme}
+          aria-label={
+            theme === 'dark'
+              ? 'Switch to light mode'
+              : 'Switch to dark mode'
+          }
+          title={
+            theme === 'dark'
+              ? 'Switch to light mode'
+              : 'Switch to dark mode'
+          }
+        >
+          {theme === 'dark' ? (
+            <Sun size={20} />
+          ) : (
+            <Moon size={20} />
+          )}
+        </button>
+        <Link className="secondary-button" to="/login">Login</Link>
+        <Link className="primary-button" to="/register">Register</Link>
+      </nav>
+    </div>
+  </header>
 
-      <section className="landing-hero">
+  <main className="landing-page">
+    <section className="landing-hero">
         <div className="landing-hero-content">
           <p className="eyebrow">Community Donation & Assistance</p>
 
@@ -192,5 +238,6 @@ export default function DashboardPage() {
         </Link>
       </section>
     </main>
+    </>
   )
 }

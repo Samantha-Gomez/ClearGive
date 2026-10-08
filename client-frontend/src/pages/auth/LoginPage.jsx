@@ -38,7 +38,13 @@ export default function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="auth-brand"><span className="brand-mark"><HeartHandshake size={22} /></span> ClearGive</div>
+        <Link className="auth-brand" to="/">
+        <span className="brand-mark">
+          <HeartHandshake size={21} />
+        </span>
+        <span>ClearGive</span>
+        </Link>
+        
         <p className="eyebrow">Welcome back</p>
         <h1>Make every contribution count.</h1>
         <p className="muted">Sign in to continue supporting communities with clarity.</p>

@@ -105,13 +105,7 @@ export default function PartnerDrivesPage() {
               donations.
             </p>
 
-            <Link
-              className="primary-button"
-              to="/partner/drives/new"
-            >
-              <Plus size={18} />
-              Create donation drive
-            </Link>
+            
           </div>
         )}
 

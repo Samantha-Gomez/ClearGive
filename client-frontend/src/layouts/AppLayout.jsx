@@ -150,7 +150,7 @@ export default function AppLayout() {
 
   const handleLogout = () => {
     logout()
-    navigate('/')
+    navigate('/', { replace: true })
   }
 
   return (
@@ -161,7 +161,7 @@ export default function AppLayout() {
           to={`/${user.role}`}
         >
           <span className="brand-mark">
-            <HeartHandshake size={21} />
+            <HeartHandshake size={22} strokeWidth={2} />
           </span>
 
           <span>ClearGive</span>
@@ -188,7 +188,7 @@ export default function AppLayout() {
                 to={to}
                 end={to === `/${user.role}`}
               >
-                <Icon size={18} />
+                <Icon size={19} strokeWidth={1.9} />
                 {label}
               </NavLink>
             ),
