@@ -32,7 +32,7 @@ const { expirePastDonationDrives } = require('./utils/expireDonationDrives');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const productionFrontendOrigin = 'https://clear-give-seven.vercel.app';
+const productionFrontendOrigin = 'https://clear-give-samantha24.vercel.app';
 const allowedOrigins = new Set([
   productionFrontendOrigin,
   ...(process.env.NODE_ENV === 'production'
