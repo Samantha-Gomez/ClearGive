@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
+import Pagination from '../../components/Pagination'
 
 export default function AdminDistributionsPage() {
   const [distributions, setDistributions] = useState([])
@@ -14,8 +15,9 @@ export default function AdminDistributionsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [pagination, setPagination] = useState(null)
 
-  const loadDistributions = useCallback(async (isRefresh = false) => {
+  const loadDistributions = useCallback(async (isRefresh = false, requestedPage = 1) => {
     if (isRefresh) {
       setRefreshing(true)
     }
@@ -23,8 +25,9 @@ export default function AdminDistributionsPage() {
     setError('')
 
     try {
-      const data = await apiRequest('/distributions/admin')
+      const data = await apiRequest(`/distributions/admin?page=${requestedPage}&limit=20`)
       setDistributions(data.distributions || data || [])
+      setPagination(data.pagination || null)
     } catch (err) {
       setError(
         err.message || 'Unable to load distribution records.',
@@ -219,6 +222,10 @@ export default function AdminDistributionsPage() {
           </div>
         </section>
       )}
+      <Pagination
+        pagination={pagination}
+        onPageChange={(nextPage) => loadDistributions(false, nextPage)}
+      />
     </div>
   )
 }

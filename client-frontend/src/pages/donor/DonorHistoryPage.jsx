@@ -53,7 +53,7 @@ export default function DonorHistoryPage() {
   )
 
   return (
-    <div className="page-shell">
+    <div className="page-shell donor-history-page">
       <div className="page-header">
         <div>
           <h1>Donation History</h1>
@@ -78,7 +78,7 @@ export default function DonorHistoryPage() {
         </button>
       </div>
 
-      <div className="stats-grid">
+      <div className="stats-grid donor-history-stats">
         <div className="stat-card">
           <div className="stat-icon">
             <Package size={20} />

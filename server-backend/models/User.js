@@ -29,6 +29,14 @@ const userSchema = new mongoose.Schema(
           : undefined;
       },
     },
+    privacyConsentAt: {
+      type: Date,
+      default: null,
+    },
+    anonymizedAt: {
+      type: Date,
+      default: null,
+    },
     emailVerificationOtpHash: {
       type: String,
       select: false,

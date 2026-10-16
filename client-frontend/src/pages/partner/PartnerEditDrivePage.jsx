@@ -17,16 +17,33 @@ const categories = [
   'Water',
   'Household Needs',
 ]
-
 const initialForm = {
   title: '',
   description: '',
   category: '',
   targetQuantity: '',
   location: '',
+  province: 'Pangasinan',
+  cityMunicipality: '',
+  barangay: '',
+  venue: '',
   eventDate: '',
+  deadline: '',
   requestedItems: [],
   assistanceReference: '',
+}
+
+function getTodayString() {
+  const today = new Date()
+  const offset = today.getTimezoneOffset() * 60000
+  return new Date(today.getTime() - offset).toISOString().slice(0, 10)
+}
+
+function getTomorrowString() {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const offset = tomorrow.getTimezoneOffset() * 60000
+  return new Date(tomorrow.getTime() - offset).toISOString().slice(0, 10)
 }
 
 export default function PartnerEditDrivePage() {
@@ -51,6 +68,50 @@ export default function PartnerEditDrivePage() {
   const [success, setSuccess] =
     useState('')
 
+  const [provinces, setProvinces] = useState([])
+  const [cities, setCities] = useState([])
+  const [barangays, setBarangays] = useState([])
+  const [locationLoading, setLocationLoading] = useState({ provinces: false, cities: false, barangays: false })
+  const [locationError, setLocationError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLocationLoading((current) => ({ ...current, provinces: true }))
+    apiRequest('/locations/provinces')
+      .then((data) => { if (!cancelled) setProvinces(Array.isArray(data.provinces) ? data.provinces : []) })
+      .catch((err) => { if (!cancelled) setLocationError(err.message || 'Unable to load provinces.') })
+      .finally(() => { if (!cancelled) setLocationLoading((current) => ({ ...current, provinces: false })) })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!form.province) {
+      setCities([])
+      return undefined
+    }
+    let cancelled = false
+    setLocationLoading((current) => ({ ...current, cities: true }))
+    apiRequest(`/locations/cities?province=${encodeURIComponent(form.province)}`)
+      .then((data) => { if (!cancelled) setCities(Array.isArray(data.cities) ? data.cities : []) })
+      .catch((err) => { if (!cancelled) setLocationError(err.message || 'Unable to load cities and municipalities.') })
+      .finally(() => { if (!cancelled) setLocationLoading((current) => ({ ...current, cities: false })) })
+    return () => { cancelled = true }
+  }, [form.province])
+
+  useEffect(() => {
+    if (!form.province || !form.cityMunicipality) {
+      setBarangays([])
+      return undefined
+    }
+    let cancelled = false
+    setLocationLoading((current) => ({ ...current, barangays: true }))
+    apiRequest(`/locations/barangays?province=${encodeURIComponent(form.province)}&city=${encodeURIComponent(form.cityMunicipality)}`)
+      .then((data) => { if (!cancelled) setBarangays(Array.isArray(data.barangays) ? data.barangays : []) })
+      .catch((err) => { if (!cancelled) setLocationError(err.message || 'Unable to load barangays.') })
+      .finally(() => { if (!cancelled) setLocationLoading((current) => ({ ...current, barangays: false })) })
+    return () => { cancelled = true }
+  }, [form.province, form.cityMunicipality])
+
   useEffect(() => {
     let cancelled = false
 
@@ -64,6 +125,7 @@ export default function PartnerEditDrivePage() {
           data.drive || data
 
         if (!cancelled) {
+          const [legacyBarangay = '', legacyCity = '', legacyProvince = 'Pangasinan'] = (drive.location || '').split(',').map((part) => part.trim())
           setForm({
             title: drive.title || '',
             description:
@@ -74,13 +136,19 @@ export default function PartnerEditDrivePage() {
               drive.targetQuantity ?? '',
             location:
               drive.location || '',
+            province: drive.province || legacyProvince,
+            cityMunicipality: drive.cityMunicipality || legacyCity,
+            barangay: drive.barangay || legacyBarangay,
+            venue: drive.venue || '',
             eventDate: drive.eventDate
               ? String(drive.eventDate).slice(0, 10)
+              : '',
+            deadline: drive.deadline
+              ? String(drive.deadline).slice(0, 10)
               : '',
             requestedItems: Array.isArray(drive.requestedItems)
               ? drive.requestedItems.map((item) => ({
                   name: item.name || '',
-                  quantity: item.quantity ?? '',
                 }))
               : [],
             assistanceReference:
@@ -146,7 +214,7 @@ export default function PartnerEditDrivePage() {
   const addRequestedItem = () => {
     setForm((current) => ({
       ...current,
-      requestedItems: [...current.requestedItems, { name: '', quantity: '' }],
+      requestedItems: [...current.requestedItems, { name: '' }],
     }))
   }
 
@@ -169,19 +237,19 @@ export default function PartnerEditDrivePage() {
     const description =
       form.description.trim()
 
-    const location =
-      form.location.trim()
+    const location = [form.barangay, form.cityMunicipality, form.province].filter(Boolean).join(', ')
 
     const assistanceReference =
       form.assistanceReference.trim()
+    const venue = form.venue.trim()
 
     const targetQuantity = Number(
       form.targetQuantity,
     )
+    const deadline = form.deadline.trim()
     const eventDate = form.eventDate.trim()
     const requestedItems = form.requestedItems.map((item) => ({
       name: item.name.trim(),
-      quantity: Number(item.quantity),
     }))
 
     if (
@@ -215,20 +283,28 @@ export default function PartnerEditDrivePage() {
       !Number.isInteger(
         targetQuantity,
       ) ||
-      targetQuantity < 1
+      targetQuantity < 1 ||
+      targetQuantity > 1000
     ) {
       setError(
-        'Target quantity must be a positive whole number.',
+        'Target quantity must be a whole number between 1 and 1,000.',
       )
       return
     }
 
-    if (!location) {
+    if (!form.province || !form.cityMunicipality || !form.barangay) {
       setError(
-        'Please enter the drive location.',
+        'Please select a province, city/municipality, and barangay.',
       )
       return
     }
+
+    if (venue.length > 300) {
+      setError('Specific venue / landmark must be 300 characters or fewer.')
+      return
+    }
+
+    const today = getTodayString()
 
     if (
       eventDate &&
@@ -239,23 +315,31 @@ export default function PartnerEditDrivePage() {
       return
     }
 
+    if (eventDate && eventDate < today) {
+      setError('The drive/event date must be today or a future date.')
+      return
+    }
+
+    if (deadline && deadline <= today) {
+      setError('The donation deadline must be a future date.')
+      return
+    }
+
     if (
       requestedItems.some(
         (item) =>
           !item.name ||
-          item.name.length > 150 ||
-          !Number.isInteger(item.quantity) ||
-          item.quantity < 1 ||
-          item.quantity > 100000000,
+          item.name.length > 150,
       )
     ) {
-      setError('Each requested item needs a name and a positive whole-number quantity.')
+      setError('Each requested item must have a name between 1 and 150 characters.')
       return
     }
 
     if (
       driveStatus === 'completed' ||
-      driveStatus === 'cancelled'
+      driveStatus === 'cancelled' ||
+      driveStatus === 'expired'
     ) {
       setError(
         `This drive can no longer be edited because it is ${driveStatus}.`,
@@ -272,10 +356,15 @@ export default function PartnerEditDrivePage() {
         category: form.category,
         targetQuantity,
         location,
+        province: form.province,
+        cityMunicipality: form.cityMunicipality,
+        barangay: form.barangay,
+        ...(venue ? { venue } : {}),
         assistanceReference: assistanceReference || undefined,
       }
 
       if (eventDate) updates.eventDate = eventDate
+      if (deadline) updates.deadline = deadline
       if (requestedItems.length) updates.requestedItems = requestedItems
 
       await apiRequest(
@@ -340,7 +429,8 @@ export default function PartnerEditDrivePage() {
 
   const isLocked =
     driveStatus === 'completed' ||
-    driveStatus === 'cancelled'
+    driveStatus === 'cancelled' ||
+    driveStatus === 'expired'
 
   return (
     <div className="page-shell">
@@ -396,7 +486,7 @@ export default function PartnerEditDrivePage() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-section">
+          <div className="form-section drive-information-section">
             <h2>
               Drive Information
             </h2>
@@ -406,7 +496,7 @@ export default function PartnerEditDrivePage() {
               will see about this drive.
             </p>
 
-            <div className="form-group">
+            <div className="form-group drive-title-field">
               <label htmlFor="title">
                 Drive Title
               </label>
@@ -427,7 +517,13 @@ export default function PartnerEditDrivePage() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group drive-deadline-field">
+              <label htmlFor="deadline">Donation Deadline</label>
+              <input id="deadline" name="deadline" type="date" min={getTomorrowString()} value={form.deadline} onChange={handleChange} disabled={submitting || isLocked} />
+              <span className="field-hint">Optional for older drives; donors can contribute until this date.</span>
+            </div>
+
+            <div className="form-group drive-description-field">
               <label htmlFor="description">
                 Description
               </label>
@@ -455,8 +551,8 @@ export default function PartnerEditDrivePage() {
               </span>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
+            <div className="form-row drive-category-target-row">
+              <div className="form-group drive-category-field">
                 <label htmlFor="category">
                   Category
                 </label>
@@ -489,7 +585,7 @@ export default function PartnerEditDrivePage() {
                 </select>
               </div>
 
-              <div className="form-group">
+              <div className="form-group drive-target-field">
                 <label htmlFor="targetQuantity">
                   Target Quantity
                 </label>
@@ -503,6 +599,7 @@ export default function PartnerEditDrivePage() {
                   }
                   onChange={handleChange}
                   min="1"
+                  max="1000"
                   step="1"
                   required
                   disabled={
@@ -518,7 +615,7 @@ export default function PartnerEditDrivePage() {
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="form-group drive-event-field">
               <label htmlFor="eventDate">
                 Drive / Event Date
               </label>
@@ -526,6 +623,7 @@ export default function PartnerEditDrivePage() {
                 id="eventDate"
                 name="eventDate"
                 type="date"
+                min={getTodayString()}
                 value={form.eventDate}
                 onChange={handleChange}
                 disabled={submitting || isLocked}
@@ -537,11 +635,11 @@ export default function PartnerEditDrivePage() {
               )}
             </div>
 
-            <div className="form-group requested-items-form-group">
+            <div className="form-group requested-items-form-group drive-requested-items-field">
               <div>
                 <label>Requested Items</label>
                 <p className="field-hint">
-                  Add the items and quantities donors should bring. Leave empty to preserve this older drive's existing data.
+                  Add the items donors should bring. Leave empty to preserve this older drive's existing data.
                 </p>
               </div>
               {form.requestedItems.map((item, index) => (
@@ -555,21 +653,6 @@ export default function PartnerEditDrivePage() {
                       onChange={(event) => updateRequestedItem(index, 'name', event.target.value)}
                       maxLength={150}
                       placeholder="Example: Notebooks"
-                      required
-                      disabled={submitting || isLocked}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`requested-quantity-${index}`}>Quantity needed</label>
-                    <input
-                      id={`requested-quantity-${index}`}
-                      type="number"
-                      value={item.quantity}
-                      onChange={(event) => updateRequestedItem(index, 'quantity', event.target.value)}
-                      min="1"
-                      max="100000000"
-                      step="1"
-                      placeholder="Example: 100"
                       required
                       disabled={submitting || isLocked}
                     />
@@ -599,26 +682,36 @@ export default function PartnerEditDrivePage() {
               </button>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="location">
-                Location
-              </label>
-
-              <input
-                id="location"
-                name="location"
-                type="text"
-                value={form.location}
-                onChange={handleChange}
-                required
-                disabled={
-                  submitting ||
-                  isLocked
-                }
-              />
+            <div className="form-group drive-location-field">
+              {locationError && <span className="field-hint" role="alert">{locationError}</span>}
+              <label htmlFor="edit-province">Province <span className="required-label">*</span></label>
+              <select className="location-select" id="edit-province" value={form.province} onChange={(event) => setForm((current) => ({ ...current, province: event.target.value, cityMunicipality: '', barangay: '' }))} required disabled={submitting || isLocked || locationLoading.provinces}>
+                <option value="">Select province</option>
+                {provinces.map((province) => <option key={province} value={province}>{province}</option>)}
+              </select>
+              {locationLoading.provinces && <span className="field-hint">Loading provinces...</span>}
+              <label htmlFor="edit-city">City / Municipality <span className="required-label">*</span></label>
+              <select className="location-select" id="edit-city" value={form.cityMunicipality} onChange={(event) => setForm((current) => ({ ...current, cityMunicipality: event.target.value, barangay: '' }))} required disabled={submitting || isLocked || !form.province || locationLoading.cities}>
+                <option value="">Select city / municipality</option>
+                {cities.map((city) => <option key={city} value={city}>{city}</option>)}
+              </select>
+              {locationLoading.cities && <span className="field-hint">Loading cities and municipalities...</span>}
+              <label htmlFor="edit-barangay">Barangay <span className="required-label">*</span></label>
+              <select className="location-select" id="edit-barangay" value={form.barangay} onChange={(event) => setForm((current) => ({ ...current, barangay: event.target.value }))} required disabled={submitting || isLocked || !form.cityMunicipality || locationLoading.barangays}>
+                <option value="">Select barangay</option>
+                {barangays.map((barangay) => <option key={barangay.psgcCode} value={barangay.name}>{barangay.name}</option>)}
+              </select>
+              {locationLoading.barangays && <span className="field-hint">Loading barangays...</span>}
+              {!locationLoading.barangays && form.cityMunicipality && !barangays.length && !locationError && <span className="field-hint">No barangays found for this city or municipality.</span>}
             </div>
 
             <div className="form-group">
+              <label htmlFor="edit-venue">Specific Venue / Landmark <span className="required-label">*</span></label>
+              <input id="edit-venue" name="venue" type="text" value={form.venue} onChange={handleChange} maxLength={300} placeholder="Example: Barangay Hall, near the public market" disabled={submitting || isLocked} />
+              <span className="field-hint">Specify the exact location where donations will be received.</span>
+            </div>
+
+            <div className="form-group drive-assistance-field">
               <label htmlFor="assistanceReference">
                 Assistance Reference{' '}
                 <span>(Optional)</span>

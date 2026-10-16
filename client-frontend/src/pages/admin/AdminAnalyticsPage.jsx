@@ -327,6 +327,14 @@ export default function AdminAnalyticsPage() {
         />
 
         <DashboardStat
+          label="Overall fulfillment"
+          value={`${formatDecimal(
+            summary.fulfillmentRate,
+          )}%`}
+          icon={BarChart3}
+        />
+
+        <DashboardStat
           label="Beneficiaries assisted"
           value={formatNumber(
             summary.beneficiariesAssisted,

@@ -255,8 +255,8 @@ export default function DonorDrivesPage() {
                     {drive.category}
                   </span>
 
-                  <span className="status-badge status-active">
-                    active
+                  <span className={`status-badge status-${String(drive.status || 'active').toLowerCase()}`}>
+                    {drive.status || 'active'}
                   </span>
                 </div>
 

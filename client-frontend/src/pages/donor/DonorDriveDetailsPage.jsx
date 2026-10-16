@@ -233,6 +233,7 @@ export default function DonorDriveDetailsPage() {
                 <strong>
                   {drive.location}
                 </strong>
+                {drive.venue && <small>Venue / landmark: {drive.venue}</small>}
               </div>
             </div>
 
@@ -252,7 +253,7 @@ export default function DonorDriveDetailsPage() {
                   <ul>
                     {requestedItems.map((item, index) => (
                       <li key={`${item.name}-${index}`}>
-                        {item.name} - {item.quantity} needed
+                        {item.name}
                       </li>
                     ))}
                   </ul>
@@ -328,6 +329,14 @@ export default function DonorDriveDetailsPage() {
             <strong>
               {Math.round(progress)}%
             </strong>
+          </div>
+
+          <div className="donor-deadline-card">
+            <CalendarDays size={18} />
+            <div>
+              <span>Donation deadline</span>
+              <strong>{formatDriveDate(drive.deadline || drive.eventDate)}</strong>
+            </div>
           </div>
 
           {isActive ? (

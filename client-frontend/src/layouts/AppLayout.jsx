@@ -13,6 +13,7 @@ import {
   Store,
   Sun,
   Truck,
+  Users,
 } from 'lucide-react'
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
@@ -50,6 +51,11 @@ const navigation = {
       icon: Store,
     },
     {
+      label: 'Distributions',
+      to: '/partner/distributions',
+      icon: Package,
+    },
+    {
       label: 'Reports',
       to: '/partner/reports',
       icon: FileSpreadsheet,
@@ -78,6 +84,11 @@ const navigation = {
       icon: ShieldCheck,
     },
     {
+      label: 'Users',
+      to: '/admin/users',
+      icon: Users,
+    },
+    {
       label: 'Donation Drives',
       to: '/admin/drives',
       icon: Truck,
@@ -101,6 +112,11 @@ const navigation = {
       label: 'Analytics',
       to: '/admin/analytics',
       icon: BarChart3,
+    },
+    {
+      label: 'Reports',
+      to: '/admin/reports',
+      icon: FileSpreadsheet,
     },
     {
       label: 'Settings',

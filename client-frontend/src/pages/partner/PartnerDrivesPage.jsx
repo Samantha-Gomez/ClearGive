@@ -1,5 +1,6 @@
 import {
   Plus,
+  CalendarDays,
   MapPin,
   Package,
   RefreshCw,
@@ -7,6 +8,19 @@ import {
 import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../../services/api'
+
+function formatDriveDate(value) {
+  if (!value) return 'Not set'
+
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`)
+  return Number.isNaN(date.getTime())
+    ? 'Not set'
+    : date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+}
 
 export default function PartnerDrivesPage() {
   const [drives, setDrives] = useState([])
@@ -152,11 +166,21 @@ export default function PartnerDrivesPage() {
                       <MapPin size={16} />
                       {drive.location}
                     </span>
+
+                    <span>
+                      <CalendarDays size={16} />
+                      Event: {formatDriveDate(drive.eventDate)}
+                    </span>
+
+                    <span>
+                      <CalendarDays size={16} />
+                      Deadline: {formatDriveDate(drive.deadline)}
+                    </span>
                   </div>
 
                   {driveId ? (
                     <Link
-                      className="text-link"
+                      className="primary-button drive-view-button"
                       to={`/partner/drives/${driveId}`}
                     >
                       View drive

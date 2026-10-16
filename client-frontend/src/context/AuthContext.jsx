@@ -3,20 +3,14 @@ import { AuthContext } from './auth-context'
 import {
   ApiError,
   apiRequest,
-  clearStoredToken,
-  getStoredToken,
-  storeToken,
 } from '../services/api'
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => getStoredToken())
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const handleAdminAuthorizationFailure = () => {
-      clearStoredToken()
-      setToken(null)
       setUser(null)
     }
 
@@ -37,11 +31,6 @@ export function AuthProvider({ children }) {
     let active = true
 
     async function restoreSession() {
-      if (!token) {
-        if (active) setLoading(false)
-        return
-      }
-
       let checkingAdminAuthorization = false
 
       try {
@@ -62,9 +51,7 @@ export function AuthProvider({ children }) {
           error.status === 403
 
         if (isExpiredSession || isRejectedAdminSession) {
-          clearStoredToken()
           if (active) {
-            setToken(null)
             setUser(null)
           }
         }
@@ -77,7 +64,7 @@ export function AuthProvider({ children }) {
     return () => {
       active = false
     }
-  }, [token])
+  }, [])
 
   async function login(credentials) {
     const data = await apiRequest('/auth/login', {
@@ -86,17 +73,9 @@ export function AuthProvider({ children }) {
     })
 
     if (data.user?.role === 'admin') {
-      storeToken(data.token)
-      try {
-        await apiRequest('/admin/stats')
-      } catch (error) {
-        clearStoredToken()
-        throw error
-      }
+      await apiRequest('/admin/stats')
     }
 
-    storeToken(data.token)
-    setToken(data.token)
     setUser(data.user)
     return data.user
   }
@@ -122,16 +101,14 @@ export function AuthProvider({ children }) {
     })
   }
 
-  function logout() {
-    clearStoredToken()
-    setToken(null)
+  async function logout() {
+    await apiRequest('/auth/logout', { method: 'POST' }).catch(() => {})
     setUser(null)
   }
 
   return (
     <AuthContext.Provider
       value={{
-        token,
         user,
         loading,
         login,

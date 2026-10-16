@@ -9,10 +9,8 @@ export default function DashboardStat({
         <Icon size={20} />
       </div>
 
-      <div className="dashboard-stat-content">
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
+      <span className="dashboard-stat-label">{label}</span>
+      <strong className="dashboard-stat-value">{value}</strong>
     </div>
   )
 }

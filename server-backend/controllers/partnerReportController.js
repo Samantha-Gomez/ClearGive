@@ -96,7 +96,7 @@ const resolveReportContext = async (req, res) => {
   if (filters.driveId) {
     const drive = await DonationDrive.findOne({
       _id: filters.driveId,
-      partnerId: req.user._id,
+      ...(req.user.role === 'admin' ? {} : { partnerId: req.user._id }),
     }).select('_id');
 
     if (!drive) {
@@ -105,6 +105,9 @@ const resolveReportContext = async (req, res) => {
     }
 
     driveIds = [drive._id];
+  } else if (req.user.role === 'admin') {
+    const drives = await DonationDrive.find().select('_id');
+    driveIds = drives.map((drive) => drive._id);
   } else {
     const drives = await DonationDrive.find({
       partnerId: req.user._id,

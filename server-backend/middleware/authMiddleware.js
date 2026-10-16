@@ -2,17 +2,19 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 
+const getCookie = (req, name) => {
+  const cookies = req.headers.cookie || '';
+  const value = cookies
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`));
+
+  return value ? decodeURIComponent(value.slice(name.length + 1)) : '';
+};
+
 const authenticate = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        message: 'Authentication required.',
-      });
-    }
-
-    const token = authHeader.slice(7).trim();
+    const token = getCookie(req, 'cleargive_session');
 
     if (!token) {
       return res.status(401).json({

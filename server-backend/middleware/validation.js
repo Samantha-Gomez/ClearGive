@@ -48,8 +48,13 @@ const donationDriveFields = [
   'category',
   'targetQuantity',
   'eventDate',
+  'deadline',
   'requestedItems',
   'location',
+  'province',
+  'cityMunicipality',
+  'barangay',
+  'venue',
   'assistanceReference',
 ];
 
@@ -95,6 +100,7 @@ const distributionFields = [
   'beneficiariesAssisted',
   'notes',
   'proofMetadata',
+  'proofPhotos',
 ];
 
 const protectedDistributionFields = [
@@ -123,13 +129,15 @@ const validateRegistration = (req, res, next) => {
     password,
     confirmPassword,
     role,
+    privacyConsent,
   } = req.body;
 
   if (
     !fullName ||
     typeof fullName !== 'string' ||
     fullName.trim().length < 2 ||
-    fullName.trim().length > 100
+    fullName.trim().length > 100 ||
+    !/^[A-Za-z]+(?:\s+[A-Za-z]+)*$/.test(fullName.trim())
   ) {
     return sendValidationError(
       res,
@@ -151,7 +159,7 @@ const validateRegistration = (req, res, next) => {
   if (
     !contactNumber ||
     typeof contactNumber !== 'string' ||
-    !/^[+()\d\s-]{7,30}$/.test(contactNumber.trim())
+    !/^\d{7,15}$/.test(contactNumber.trim())
   ) {
     return sendValidationError(
       res,
@@ -175,6 +183,13 @@ const validateRegistration = (req, res, next) => {
     return sendValidationError(
       res,
       'Password and confirm password do not match.',
+    );
+  }
+
+  if (privacyConsent !== true) {
+    return sendValidationError(
+      res,
+      'You must agree to the Privacy Notice before creating an account.',
     );
   }
 
@@ -312,6 +327,43 @@ const validatePasswordReset = (req, res, next) => {
   }
 
   req.body.email = email.trim().toLowerCase();
+
+  next();
+};
+
+const validateAccountDeletion = (req, res, next) => {
+  const { currentPassword, confirmation } = req.body || {};
+
+  if (
+    typeof currentPassword !== 'string' ||
+    currentPassword.length < 1 ||
+    currentPassword.length > 128
+  ) {
+    return sendValidationError(
+      res,
+      'Your current password is required to close the account.',
+    );
+  }
+
+  if (confirmation !== 'DELETE MY ACCOUNT') {
+    return sendValidationError(
+      res,
+      'Type DELETE MY ACCOUNT exactly to confirm account closure.',
+    );
+  }
+
+  next();
+};
+
+const validateAdminUserStatus = (req, res, next) => {
+  const { status } = req.body || {};
+
+  if (!['active', 'suspended'].includes(status)) {
+    return sendValidationError(
+      res,
+      'status must be active or suspended.',
+    );
+  }
 
   next();
 };
@@ -470,6 +522,10 @@ const validateDonationDriveFields = (
     ['title', 3, 150, true],
     ['description', 10, 2000, true],
     ['location', 2, 300, true],
+    ['province', 1, 100, false],
+    ['cityMunicipality', 1, 150, false],
+    ['barangay', 1, 150, false],
+    ['venue', 1, 300, false],
   ];
 
   for (const [
@@ -491,6 +547,23 @@ const validateDonationDriveFields = (
 
     if (error) {
       return error;
+    }
+
+    if (Number(body.targetQuantity) > 1000) {
+      return 'targetQuantity must not exceed 1,000.';
+    }
+  }
+
+  if (requireAll) {
+    const venueError = validateTextField(
+      body.venue,
+      'venue',
+      1,
+      300,
+      true,
+    );
+    if (venueError) {
+      return venueError;
     }
   }
 
@@ -528,6 +601,25 @@ const validateDonationDriveFields = (
     }
 
     body.eventDate = date;
+
+    if (value < new Date().toISOString().slice(0, 10)) {
+      return 'eventDate must be today or a future date.';
+    }
+  }
+
+  if (requireAll || body.deadline !== undefined) {
+    const value = body.deadline;
+    const date = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? new Date(`${value}T00:00:00.000Z`) : null;
+    if (!date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+      return 'deadline must be a valid date in YYYY-MM-DD format.';
+    }
+    body.deadline = date;
+
+    if (value <= new Date().toISOString().slice(0, 10)) {
+      return 'deadline must be a future date.';
+    }
+
   }
 
   if (requireAll || body.requestedItems !== undefined) {
@@ -549,7 +641,7 @@ const validateDonationDriveFields = (
       }
 
       const unknownItemField = Object.keys(item).find(
-        (field) => !['name', 'quantity'].includes(field),
+        (field) => field !== 'name',
       );
 
       if (unknownItemField) {
@@ -564,19 +656,10 @@ const validateDonationDriveFields = (
         return `requestedItems[${index}].name must be between 1 and 150 characters.`;
       }
 
-      const quantityError = validatePositiveInteger(
-        item.quantity,
-        `requestedItems[${index}].quantity`,
-      );
-
-      if (quantityError) {
-        return quantityError;
-      }
     }
 
     body.requestedItems = body.requestedItems.map((item) => ({
       name: item.name.trim(),
-      quantity: item.quantity,
     }));
   }
 
@@ -611,6 +694,10 @@ const normalizeDonationDriveFields = (body) => {
     'title',
     'description',
     'location',
+    'province',
+    'cityMunicipality',
+    'barangay',
+    'venue',
     'assistanceReference',
   ]) {
     if (typeof body[field] === 'string') {
@@ -1233,6 +1320,8 @@ module.exports = {
   validateLogin,
   validateForgotPassword,
   validatePasswordReset,
+  validateAccountDeletion,
+  validateAdminUserStatus,
   validateEmailVerification,
   validateEmailVerificationResend,
   validateObjectId,

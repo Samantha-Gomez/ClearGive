@@ -1,5 +1,4 @@
 import { Route, Routes } from 'react-router-dom'
-import { useAuth } from '../context/useAuth'
 import AppLayout from '../layouts/AppLayout'
 import DashboardPage from '../pages/dashboards/DashboardPage'
 import LoginPage from '../pages/auth/LoginPage'
@@ -7,6 +6,7 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import VerifyEmailPage from '../pages/auth/VerifyEmailPage'
 import AdminAnalyticsPage from '../pages/admin/AdminAnalyticsPage'
+import AdminReportsPage from '../pages/admin/AdminReportsPage'
 import AdminDashboard from '../pages/dashboards/AdminDashboard'
 import AdminActivityPage from '../pages/admin/AdminActivityPage'
 import AdminDrivesPage from '../pages/admin/AdminDrivesPage'
@@ -14,6 +14,7 @@ import AdminDriveDetailsPage from '../pages/admin/AdminDriveDetailsPage'
 import AdminDonationsPage from '../pages/admin/AdminDonationsPage'
 import AdminDistributionsPage from '../pages/admin/AdminDistributionsPage'
 import AdminVerificationPage from '../pages/admin/AdminVerificationPage'
+import AdminUsersPage from '../pages/admin/AdminUsersPage'
 import DonorDashboard from '../pages/dashboards/DonorDashboard'
 import PartnerDashboard from '../pages/dashboards/PartnerDashboard'
 import PartnerDrivesPage from '../pages/partner/PartnerDrivesPage'
@@ -23,32 +24,16 @@ import PartnerDriveDetailsPage from '../pages/partner/PartnerDriveDetailsPage'
 import PartnerEditDrivePage from '../pages/partner/PartnerEditDrivePage'
 import PartnerDriveDonationsPage from '../pages/partner/PartnerDriveDonationsPage'
 import PartnerDriveDistributionsPage from '../pages/partner/PartnerDriveDistributionsPage'
+import PartnerDistributionsPage from '../pages/partner/PartnerDistributionsPage'
 import PartnerVerificationPage from '../pages/partner/PartnerVerificationPage'
 import DonorHistoryPage from '../pages/donor/DonorHistoryPage'
 import DonorDrivesPage from '../pages/donor/DonorDrivesPage'
 import DonorDriveDetailsPage from '../pages/donor/DonorDriveDetailsPage'
 import SettingsPage from '../pages/settings/SettingsPage'
 import NotFoundPage from '../pages/NotFoundPage'
+import PrivacyPage from '../pages/PrivacyPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PublicOnlyRoute } from './PublicOnlyRoute'
-
-function HomeRedirect() {
-  const { user, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="page-state">
-        Loading ClearGive...
-      </div>
-    )
-  }
-
-  return user ? (
-    <div className="page-state">
-      Redirecting...
-    </div>
-  ) : null
-}
 
 export default function AppRoutes() {
   return (
@@ -59,6 +44,7 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Route>
 
       <Route element={<AppLayout />}>
@@ -131,6 +117,11 @@ export default function AppRoutes() {
           />
 
           <Route
+            path="/partner/distributions"
+            element={<PartnerDistributionsPage />}
+          />
+
+          <Route
             path="/partner/verification"
             element={<PartnerVerificationPage />}
           />
@@ -158,6 +149,11 @@ export default function AppRoutes() {
           />
 
           <Route
+            path="/admin/users"
+            element={<AdminUsersPage />}
+          />
+
+          <Route
             path="/admin/drives"
             element={<AdminDrivesPage />}
           />
@@ -180,6 +176,11 @@ export default function AppRoutes() {
           <Route
             path="/admin/analytics"
             element={<AdminAnalyticsPage />}
+          />
+
+          <Route
+            path="/admin/reports"
+            element={<AdminReportsPage />}
           />
 
           <Route

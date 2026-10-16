@@ -8,15 +8,6 @@ const requestedItemSchema = new mongoose.Schema(
       minlength: 1,
       maxlength: 150,
     },
-    quantity: {
-      type: Number,
-      min: 1,
-      max: 100000000,
-      validate: {
-        validator: Number.isInteger,
-        message: 'Requested item quantity must be a positive integer.',
-      },
-    },
   },
   { _id: false },
 );
@@ -62,6 +53,10 @@ const donationDriveSchema = new mongoose.Schema(
     eventDate: {
       type: Date,
     },
+    deadline: {
+      type: Date,
+      required: true,
+    },
     requestedItems: {
       type: [requestedItemSchema],
       default: undefined,
@@ -73,6 +68,10 @@ const donationDriveSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 300,
     },
+    province: { type: String, trim: true, maxlength: 100 },
+    cityMunicipality: { type: String, trim: true, maxlength: 150 },
+    barangay: { type: String, trim: true, maxlength: 150 },
+    venue: { type: String, trim: true, maxlength: 300 },
     assistanceReference: {
       type: String,
       trim: true,
@@ -80,7 +79,7 @@ const donationDriveSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'paused', 'completed', 'cancelled'],
+      enum: ['active', 'paused', 'completed', 'cancelled', 'expired'],
       default: 'active',
     },
   },

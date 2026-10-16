@@ -56,6 +56,11 @@ const distributionSchema = new mongoose.Schema(
       type: proofMetadataSchema,
       default: undefined,
     },
+    proofPhotos: {
+      type: [String],
+      default: undefined,
+      validate: { validator: (photos) => !photos || photos.length <= 5, message: 'Up to 5 beneficiary photos are allowed.' },
+    },
     recordedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -7,6 +7,8 @@ const { logActivity } = require('../utils/activityLogger');
 const {
   createNotifications,
 } = require('../utils/notificationService');
+const { expirePastDonationDrives } = require('../utils/expireDonationDrives');
+const { getPagination, getPaginationMeta } = require('../utils/pagination');
 
 const editableDriveFields = [
   'title',
@@ -14,8 +16,13 @@ const editableDriveFields = [
   'category',
   'targetQuantity',
   'eventDate',
+  'deadline',
   'requestedItems',
   'location',
+  'province',
+  'cityMunicipality',
+  'barangay',
+  'venue',
   'assistanceReference',
 ];
 
@@ -31,13 +38,15 @@ const driveStatuses = [
   'paused',
   'completed',
   'cancelled',
+  'expired',
 ];
 
 const driveStatusTransitions = {
-  active: ['paused', 'completed', 'cancelled'],
-  paused: ['active', 'completed', 'cancelled'],
+  active: ['paused', 'completed', 'cancelled', 'expired'],
+  paused: ['active', 'completed', 'cancelled', 'expired'],
   completed: [],
   cancelled: [],
+  expired: [],
 };
 
 const isValidObjectId = (value) =>
@@ -110,10 +119,15 @@ const serializeDrive = (drive) => {
     category: drive.category,
     targetQuantity: drive.targetQuantity,
     eventDate: drive.eventDate || null,
+    deadline: drive.deadline || null,
     requestedItems: Array.isArray(drive.requestedItems)
       ? drive.requestedItems
       : [],
     location: drive.location,
+    province: drive.province || null,
+    cityMunicipality: drive.cityMunicipality || null,
+    barangay: drive.barangay || null,
+    venue: drive.venue || null,
     assistanceReference:
       drive.assistanceReference || null,
     status: drive.status,
@@ -187,12 +201,18 @@ const createDrive = async (req, res, next) => {
 
 const listOwnDrives = async (req, res, next) => {
   try {
-    const drives = await DonationDrive.find({
-      partnerId: req.user._id,
-    }).sort({ createdAt: -1 });
+    await expirePastDonationDrives({ partnerId: req.user._id });
+
+    const { page, limit, skip } = getPagination(req.query);
+    const filter = { partnerId: req.user._id };
+    const [drives, total] = await Promise.all([
+      DonationDrive.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      DonationDrive.countDocuments(filter),
+    ]);
 
     return res.json({
       drives: drives.map(serializeDrive),
+      pagination: getPaginationMeta({ page, limit, total }),
     });
   } catch (error) {
     return next(error);
@@ -274,6 +294,11 @@ const getOwnDrive = async (req, res, next) => {
       });
     }
 
+    await expirePastDonationDrives({
+      _id: req.params.id,
+      partnerId: req.user._id,
+    });
+
     const drive = await DonationDrive.findOne({
       _id: req.params.id,
       partnerId: req.user._id,
@@ -344,10 +369,11 @@ const updateOwnDrive = async (req, res, next) => {
         {
           _id: req.params.id,
           partnerId: req.user._id,
+          status: { $ne: 'expired' },
         },
         { $set: updates },
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       );
@@ -386,6 +412,8 @@ const updateDriveStatus = async (req, res, next) => {
           'Invalid donation drive ID format.',
       });
     }
+
+    await expirePastDonationDrives({ _id: req.params.id });
 
     const bodyError = validateEditableBody(
       req.body,
@@ -571,6 +599,8 @@ const listPublicActiveDrives = async (
   next,
 ) => {
   try {
+    await expirePastDonationDrives();
+
     const filter =
       await buildPublicDriveFilter(
         req.query || {},
@@ -729,13 +759,20 @@ const listAdminDrives = async (
   next,
 ) => {
   try {
-    const drives =
-      await DonationDrive.find()
+    await expirePastDonationDrives();
+
+    const { page, limit, skip } = getPagination(req.query);
+    const [drives, total] = await Promise.all([
+      DonationDrive.find()
         .populate(
           'partnerId',
           'fullName organizationName email',
         )
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      DonationDrive.countDocuments(),
+    ]);
 
     const serializedDrives =
       await Promise.all(
@@ -746,6 +783,7 @@ const listAdminDrives = async (
 
     return res.json({
       drives: serializedDrives,
+      pagination: getPaginationMeta({ page, limit, total }),
     });
   } catch (error) {
     return next(error);
@@ -764,6 +802,8 @@ const getAdminDrive = async (
           'Invalid donation drive ID format.',
       });
     }
+
+    await expirePastDonationDrives({ _id: req.params.id });
 
     const drive =
       await DonationDrive.findById(

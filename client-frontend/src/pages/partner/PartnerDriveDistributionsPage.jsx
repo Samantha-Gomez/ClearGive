@@ -17,6 +17,7 @@ const emptyForm = {
   proofFileName: '',
   proofFileType: '',
   proofFileSize: '',
+  proofPhotos: [],
 }
 
 const getDonationId = (donation) => donation?.id || donation?._id
@@ -38,6 +39,18 @@ export default function PartnerDriveDistributionsPage() {
   const [success, setSuccess] = useState('')
 
   const [form, setForm] = useState(emptyForm)
+
+  const handlePhotoChange = (event) => {
+    const files = Array.from(event.target.files || [])
+    if (files.length > 5) { setError('Choose up to 5 beneficiary photos.'); return }
+    Promise.all(files.map((file) => new Promise((resolve, reject) => {
+      if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 5 * 1024 * 1024) { reject(new Error('Photos must be JPG or PNG files no larger than 5MB each.')); return }
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(new Error('Unable to read one of the photos.'))
+      reader.readAsDataURL(file)
+    }))).then((proofPhotos) => { setForm((current) => ({ ...current, proofPhotos })); setError('') }).catch((err) => setError(err.message))
+  }
 
   const loadData = useCallback(
     async (isRefresh = false) => {
@@ -346,6 +359,7 @@ export default function PartnerDriveDistributionsPage() {
                 form.notes.trim() ||
                 undefined,
               proofMetadata,
+              proofPhotos: form.proofPhotos,
             },
           },
         )
@@ -600,6 +614,7 @@ export default function PartnerDriveDistributionsPage() {
           </div>
 
           <form
+            className="distribution-record-form"
             onSubmit={
               handleSubmit
             }
@@ -698,91 +713,18 @@ export default function PartnerDriveDistributionsPage() {
               </h3>
 
               <p className="form-section-description">
-                Record basic proof-file
-                information. The current
-                backend stores metadata
-                only; the actual file
-                upload is not implemented
-                yet.
+                Upload photos showing the beneficiaries receiving the donation. JPG and PNG files only, up to 5 photos and 5MB each.
               </p>
 
-              <div className="form-group">
-                <label htmlFor="proofFileName">
-                  File Name
-                </label>
-
-                <input
-                  id="proofFileName"
-                  name="proofFileName"
-                  type="text"
-                  value={
-                    form.proofFileName
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  maxLength={255}
-                  placeholder="Example: distribution-proof-001.jpg"
-                  disabled={
-                    submitting
-                  }
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="proofFileType">
-                    MIME Type
-                  </label>
-
-                  <input
-                    id="proofFileType"
-                    name="proofFileType"
-                    type="text"
-                    value={
-                      form.proofFileType
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    maxLength={100}
-                    placeholder="Example: image/jpeg"
-                    disabled={
-                      submitting
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="proofFileSize">
-                    Size in Bytes
-                  </label>
-
-                  <input
-                    id="proofFileSize"
-                    name="proofFileSize"
-                    type="number"
-                    min="1"
-                    max={
-                      10 * 1024 * 1024
-                    }
-                    step="1"
-                    value={
-                      form.proofFileSize
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Example: 250000"
-                    disabled={
-                      submitting
-                    }
-                  />
-                </div>
-              </div>
             </div>
 
-            <div className="form-actions">
+            <div className="form-group">
+              <label htmlFor="proofPhotos">Beneficiary photos</label>
+              <input id="proofPhotos" type="file" accept="image/jpeg,image/png" multiple onChange={handlePhotoChange} disabled={submitting} />
+              {form.proofPhotos.length > 0 && <span className="field-hint">{form.proofPhotos.length} photo(s) selected.</span>}
+            </div>
+
+            <div className="form-actions distribution-form-actions">
               <button
                 type="button"
                 className="secondary-button"
@@ -869,6 +811,7 @@ export default function PartnerDriveDistributionsPage() {
                     Beneficiaries
                   </th>
                   <th>Notes</th>
+                  <th>Proof photos</th>
                   <th>Date</th>
                 </tr>
               </thead>
@@ -923,6 +866,18 @@ export default function PartnerDriveDistributionsPage() {
                         <td>
                           {distribution.notes ||
                             '—'}
+                        </td>
+
+                        <td>
+                          {distribution.proofPhotos?.length ? (
+                            <div className="proof-photo-strip">
+                              {distribution.proofPhotos.map((photo, index) => (
+                                <a href={photo} target="_blank" rel="noreferrer" key={`${distribution.id || distribution._id}-photo-${index}`}>
+                                  <img src={photo} alt={`Beneficiary proof ${index + 1}`} />
+                                </a>
+                              ))}
+                            </div>
+                          ) : '—'}
                         </td>
 
                         <td>

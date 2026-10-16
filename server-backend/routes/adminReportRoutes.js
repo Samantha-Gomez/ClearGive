@@ -1,0 +1,17 @@
+const express = require('express');
+const {
+  exportDrives,
+  exportDonations,
+  exportDistributions,
+} = require('../controllers/partnerReportController');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+router.use(authenticate, authorize('admin'));
+
+router.get('/drives/export', exportDrives);
+router.get('/donations/export', exportDonations);
+router.get('/distributions/export', exportDistributions);
+
+module.exports = router;

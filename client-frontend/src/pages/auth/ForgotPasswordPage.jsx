@@ -2,7 +2,26 @@ import { useState } from 'react'
 import { ArrowLeft, HeartHandshake, KeyRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+async function readResponse(response) {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    const text = await response.text()
+
+    if (!text.trim()) return {}
+
+    try {
+      return JSON.parse(text)
+    } catch {
+      return { message: 'The server returned an invalid response. Please try again.' }
+    }
+  }
+
+  const text = await response.text()
+  return text.trim() ? { message: text } : {}
+}
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -39,10 +58,13 @@ export default function ForgotPasswordPage() {
         }),
       })
 
-      const data = await response.json()
+      const data = await readResponse(response)
 
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to request a password reset.')
+        throw new Error(
+          data.message ||
+            `Unable to request a password reset (HTTP ${response.status}).`,
+        )
       }
 
       setMessage(data.message)
@@ -74,10 +96,12 @@ export default function ForgotPasswordPage() {
         }),
       })
 
-      const data = await response.json()
+      const data = await readResponse(response)
 
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to reset your password.')
+        throw new Error(
+          data.message || `Unable to reset your password (HTTP ${response.status}).`,
+        )
       }
 
       setMessage(data.message)

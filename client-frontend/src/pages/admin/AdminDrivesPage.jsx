@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
+import Pagination from '../../components/Pagination'
 
 const categories = [
   'All Categories',
@@ -25,6 +26,7 @@ const statuses = [
   'paused',
   'completed',
   'cancelled',
+  'expired',
 ]
 
 export default function AdminDrivesPage() {
@@ -37,9 +39,10 @@ export default function AdminDrivesPage() {
     useState('All Categories')
   const [status, setStatus] =
     useState('All Statuses')
+  const [pagination, setPagination] = useState(null)
 
   const loadDrives = useCallback(
-    async (isRefresh = false) => {
+    async (isRefresh = false, requestedPage = 1) => {
       if (isRefresh) {
         setRefreshing(true)
       } else {
@@ -50,7 +53,7 @@ export default function AdminDrivesPage() {
 
       try {
         const data = await apiRequest(
-          '/admin/drives',
+          `/admin/drives?page=${requestedPage}&limit=20`,
         )
 
         setDrives(
@@ -58,6 +61,7 @@ export default function AdminDrivesPage() {
             data ||
             [],
         )
+        setPagination(data.pagination || null)
       } catch (err) {
         setError(
           err.message ||
@@ -246,6 +250,7 @@ export default function AdminDrivesPage() {
       ) : (
         <div className="drive-grid">
           {filteredDrives.map((drive) => {
+            const driveId = drive.id || drive._id
             const targetQuantity =
               Number(
                 drive.targetQuantity || 0,
@@ -270,7 +275,7 @@ export default function AdminDrivesPage() {
             return (
               <article
                 className="drive-card"
-                key={drive._id}
+                key={driveId}
               >
                 <div className="drive-card-header">
                   <span className="category-badge">
@@ -333,7 +338,7 @@ export default function AdminDrivesPage() {
                   </span>
 
                   <Link
-                    to={`/admin/drives/${drive._id}`}
+                    to={`/admin/drives/${driveId}`}
                     className="primary-button"
                   >
                     View Drive
@@ -344,6 +349,10 @@ export default function AdminDrivesPage() {
           })}
         </div>
       )}
+      <Pagination
+        pagination={pagination}
+        onPageChange={(nextPage) => loadDrives(false, nextPage)}
+      />
     </div>
   )
 }

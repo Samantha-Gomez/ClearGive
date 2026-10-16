@@ -320,10 +320,18 @@ export default function AdminDriveDetailsPage() {
               Location
             </span>
 
-            <strong className="detail-inline">
-              <MapPin size={16} />
-              {drive.location}
-            </strong>
+            <div className="admin-location-value">
+              <strong className="detail-inline">
+                <MapPin size={16} />
+                <span>{drive.location}</span>
+              </strong>
+              {drive.venue && (
+                <span className="admin-location-venue">
+                  <span>Venue / landmark</span>
+                  <strong>{drive.venue}</strong>
+                </span>
+              )}
+            </div>
           </div>
 
           <div>

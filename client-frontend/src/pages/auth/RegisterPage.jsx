@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth'
 
 const initialForm = {
-  fullName: '', email: '', contactNumber: '', password: '', confirmPassword: '', role: 'donor', organizationName: '', organizationType: 'NGO/non-profit',
+  fullName: '', email: '', contactNumber: '', password: '', confirmPassword: '', role: 'donor', organizationName: '', organizationType: 'NGO/non-profit', privacyConsent: false,
 }
 
 export default function RegisterPage() {
@@ -21,8 +21,32 @@ export default function RegisterPage() {
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    const fullName = form.fullName.trim()
+    const email = form.email.trim()
+    const contactNumber = form.contactNumber.trim()
+
+    if (!/^[A-Za-z]+(?:\s+[A-Za-z]+)*$/.test(fullName)) {
+      setError('Full name may contain letters and spaces only.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+    if (!/^\d{7,15}$/.test(contactNumber)) {
+      setError('Contact number must contain 7 to 15 digits only.')
+      return
+    }
+    if (form.password.length < 8 || form.password.length > 128) {
+      setError('Password must be between 8 and 128 characters long.')
+      return
+    }
     if (form.password !== form.confirmPassword) {
       setError('Password and confirm password do not match.')
+      return
+    }
+    if (!form.privacyConsent) {
+      setError('You must agree to the Privacy Notice before creating an account.')
       return
     }
     setSubmitting(true)
@@ -59,11 +83,11 @@ export default function RegisterPage() {
         {error && <div className="form-error" role="alert">{error}</div>}
         <form onSubmit={handleSubmit}>
           <label htmlFor="fullName">Full name</label>
-          <input id="fullName" name="fullName" value={form.fullName} onChange={updateField} minLength="2" maxLength="100" required />
+          <input id="fullName" name="fullName" value={form.fullName} onChange={updateField} minLength="2" maxLength="100" pattern="[A-Za-z]+(\s+[A-Za-z]+)*" title="Use letters and spaces only" required />
           <label htmlFor="email">Email address</label>
-          <input id="email" name="email" type="email" autoComplete="email" value={form.email} onChange={updateField} required />
+          <input id="email" name="email" type="email" autoComplete="email" value={form.email} onChange={updateField} pattern="[^\s@]+@[^\s@]+\.[^\s@]{2,}" required />
           <label htmlFor="contactNumber">Contact number</label>
-          <input id="contactNumber" name="contactNumber" type="tel" value={form.contactNumber} onChange={updateField} minLength="7" required />
+          <input id="contactNumber" name="contactNumber" type="tel" inputMode="numeric" value={form.contactNumber} onChange={updateField} minLength="7" maxLength="15" pattern="[0-9]{7,15}" title="Use 7 to 15 digits only" required />
           <label htmlFor="role">I am joining as</label>
           <select id="role" name="role" value={form.role} onChange={updateField}>
             <option value="donor">Donor</option>
@@ -81,9 +105,21 @@ export default function RegisterPage() {
             </select>
           </>}
           <div className="form-grid">
-            <div><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" value={form.password} onChange={updateField} minLength="8" required /></div>
-            <div><label htmlFor="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={updateField} minLength="8" required /></div>
+            <div><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" value={form.password} onChange={updateField} minLength="8" maxLength="128" required /></div>
+            <div><label htmlFor="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={updateField} minLength="8" maxLength="128" required /></div>
           </div>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              name="privacyConsent"
+              checked={form.privacyConsent}
+              onChange={(event) => setForm({ ...form, privacyConsent: event.target.checked })}
+              required
+            />
+            <span>
+              I agree to the <Link to="/privacy">Privacy Notice</Link> and understand how ClearGive uses my information.
+            </span>
+          </label>
           <button className="primary-button" type="submit" disabled={submitting}>
             <UserPlus size={18} />
             {submitting ? 'Creating account...' : 'Create account'}

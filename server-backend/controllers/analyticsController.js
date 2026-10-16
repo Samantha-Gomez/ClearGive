@@ -1,9 +1,12 @@
 const DonationDrive = require('../models/DonationDrive');
 const Donation = require('../models/Donation');
 const Distribution = require('../models/Distribution');
+const { expirePastDonationDrives } = require('../utils/expireDonationDrives');
 
 const getAdminAnalytics = async (req, res, next) => {
   try {
+    await expirePastDonationDrives();
+
     const [
       drives,
       donations,
@@ -66,6 +69,15 @@ const getAdminAnalytics = async (req, res, next) => {
         0,
       );
 
+    const totalTarget = drives.reduce(
+      (sum, drive) => sum + Number(drive.targetQuantity || 0),
+      0,
+    );
+
+    const fulfillmentRate = totalTarget > 0
+      ? Math.min((totalDistributed / totalTarget) * 100, 100)
+      : 0;
+
     const beneficiariesAssisted =
       distributions.reduce(
         (sum, distribution) =>
@@ -127,6 +139,7 @@ const getAdminAnalytics = async (req, res, next) => {
       paused: 0,
       completed: 0,
       cancelled: 0,
+      expired: 0,
     };
 
     drives.forEach((drive) => {
@@ -303,6 +316,8 @@ const getAdminAnalytics = async (req, res, next) => {
         totalDonated,
         totalReceived,
         totalDistributed,
+        totalTarget,
+        fulfillmentRate: Number(fulfillmentRate.toFixed(2)),
         beneficiariesAssisted,
 
         averageDistributionDelay:

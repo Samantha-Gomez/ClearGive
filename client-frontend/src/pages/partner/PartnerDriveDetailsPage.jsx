@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ArrowLeft,
   LoaderCircle,
@@ -23,7 +23,7 @@ export default function PartnerDriveDetailsPage() {
   const [updatingStatus, setUpdatingStatus] =
     useState(false)
 
-  const loadDrive = async (isRefresh = false) => {
+  const loadDrive = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true)
     } else {
@@ -47,11 +47,11 @@ export default function PartnerDriveDetailsPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     loadDrive()
-  }, [id])
+  }, [loadDrive])
 
   const handleStatusChange = async () => {
     if (!drive || updatingStatus) return
@@ -274,6 +274,7 @@ export default function PartnerDriveDetailsPage() {
                 <MapPin size={16} />
                 {drive.location}
               </strong>
+              {drive.venue && <span className="field-hint">Venue / landmark: {drive.venue}</span>}
             </div>
 
             {drive.assistanceReference && (
@@ -288,6 +289,57 @@ export default function PartnerDriveDetailsPage() {
               </div>
             )}
           </div>
+        </section>
+
+        <section className="detail-card">
+          <span className="detail-label">
+            Drive Controls
+          </span>
+
+          <div className="detail-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => navigate(`/partner/drives/${id}/edit`)}
+              disabled={
+                drive.status === 'completed' ||
+                drive.status === 'cancelled'
+              }
+            >
+              <Pencil size={17} />
+              Edit Drive
+            </button>
+
+            {canChangeStatus && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleStatusChange}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? (
+                  <>
+                    <LoaderCircle size={17} className="spin" />
+                    Updating...
+                  </>
+                ) : isActive ? (
+                  <>
+                    <Pause size={17} />
+                    Pause Drive
+                  </>
+                ) : (
+                  <>
+                    <Play size={17} />
+                    Reactivate Drive
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          <p className="field-hint">
+            Pausing a drive temporarily prevents it from receiving new donor activity while keeping its existing records.
+          </p>
         </section>
 
         <section className="detail-card">
@@ -317,67 +369,6 @@ export default function PartnerDriveDetailsPage() {
           <p className="progress-text">
             {Math.round(progress)}% of the
             target has been collected.
-          </p>
-        </section>
-
-        <section className="detail-card">
-          <span className="detail-label">
-            Drive Controls
-          </span>
-
-          <div className="detail-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() =>
-                navigate(
-                  `/partner/drives/${id}/edit`,
-                )
-              }
-              disabled={
-                drive.status === 'completed' ||
-                drive.status === 'cancelled'
-              }
-            >
-              <Pencil size={17} />
-              Edit Drive
-            </button>
-
-            {canChangeStatus && (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={handleStatusChange}
-                disabled={updatingStatus}
-              >
-                {updatingStatus ? (
-                  <>
-                    <LoaderCircle
-                      size={17}
-                      className="spin"
-                    />
-                    Updating...
-                  </>
-                ) : isActive ? (
-                  <>
-                    <Pause size={17} />
-                    Pause Drive
-                  </>
-                ) : (
-                  <>
-                    <Play size={17} />
-                    Reactivate Drive
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-
-          <p className="field-hint">
-            Pausing a drive temporarily
-            prevents it from receiving new
-            donor activity while keeping its
-            existing records.
           </p>
         </section>
 

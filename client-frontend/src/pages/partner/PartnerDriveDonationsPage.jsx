@@ -135,7 +135,7 @@ export default function PartnerDriveDonationsPage() {
     }
 
     if (!item.trim()) {
-      setError('Please enter the donated item.')
+      setError('Please select one of the requested items.')
       return
     }
 
@@ -229,6 +229,14 @@ export default function PartnerDriveDonationsPage() {
     )
   }
 
+  const requestedItemOptions = Array.isArray(drive.requestedItems)
+    ? [...new Set(
+        drive.requestedItems
+          .map((requestedItem) => requestedItem?.name?.trim())
+          .filter(Boolean),
+      )]
+    : []
+
   return (
     <div className="page-shell">
       <div className="page-header">
@@ -241,9 +249,21 @@ export default function PartnerDriveDonationsPage() {
             Back to Drive
           </Link>
 
-          <h1>Donations</h1>
+          <div className="page-title-row donation-page-title-row">
+            <div>
+              <h1>Donations</h1>
+              <p>{drive.title}</p>
+            </div>
 
-          <p>{drive.title}</p>
+            <div className="drive-context-meta">
+              <span className={`status-badge status-${String(drive.status || 'unknown').toLowerCase()}`}>
+                {drive.status || 'Unknown status'}
+              </span>
+              <span className="drive-category-label">
+                {drive.category || 'Category unavailable'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <button
@@ -299,7 +319,7 @@ export default function PartnerDriveDonationsPage() {
 
         <form
           onSubmit={handleRecordDonation}
-          className="form-grid"
+          className="form-grid donation-record-form"
         >
           {/* REGISTERED DONOR */}
           <div className="form-group">
@@ -392,18 +412,26 @@ export default function PartnerDriveDonationsPage() {
               </span>
             </label>
 
-            <input
+            <select
               id="item"
-              type="text"
               value={item}
               onChange={(event) =>
                 setItem(event.target.value)
               }
-              placeholder="Example: notebooks"
-              minLength={2}
-              maxLength={150}
+              disabled={recording || requestedItemOptions.length === 0}
               required
-            />
+            >
+              <option value="">
+                {requestedItemOptions.length > 0
+                  ? 'Select a requested item'
+                  : 'No requested items available'}
+              </option>
+              {requestedItemOptions.map((requestedItem) => (
+                <option key={requestedItem} value={requestedItem}>
+                  {requestedItem}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* QUANTITY */}

@@ -4,6 +4,7 @@ const Donation = require('../models/Donation');
 const Distribution = require('../models/Distribution');
 const { logActivity } = require('../utils/activityLogger');
 const { createNotification } = require('../utils/notificationService');
+const { getPagination, getPaginationMeta } = require('../utils/pagination');
 
 const distributionFields = [
   'donationId',
@@ -11,6 +12,7 @@ const distributionFields = [
   'beneficiariesAssisted',
   'notes',
   'proofMetadata',
+  'proofPhotos',
 ];
 
 const protectedDistributionFields = [
@@ -164,6 +166,13 @@ const validateDistributionBody = (body) => {
     return proofMetadataError;
   }
 
+  if (body.proofPhotos !== undefined) {
+    if (!Array.isArray(body.proofPhotos) || body.proofPhotos.length > 5) return 'Up to 5 beneficiary photos are allowed.';
+    if (body.proofPhotos.some((photo) => typeof photo !== 'string' || !/^data:image\/(jpeg|png);base64,/.test(photo) || photo.length > 7 * 1024 * 1024)) {
+      return 'Each beneficiary photo must be a JPG or PNG image no larger than 5MB.';
+    }
+  }
+
   return null;
 };
 
@@ -175,6 +184,7 @@ const serializeDistribution = (distribution) => ({
   beneficiariesAssisted: distribution.beneficiariesAssisted,
   notes: distribution.notes || null,
   proofMetadata: distribution.proofMetadata || null,
+  proofPhotos: distribution.proofPhotos || [],
   recordedBy: distribution.recordedBy,
   createdAt: distribution.createdAt,
   updatedAt: distribution.updatedAt,
@@ -273,6 +283,7 @@ const recordDistribution = async (req, res, next) => {
           ? undefined
           : req.body.notes.trim(),
       proofMetadata: req.body.proofMetadata,
+      proofPhotos: req.body.proofPhotos,
       recordedBy: req.user._id,
     });
 
@@ -367,7 +378,9 @@ const listDriveDistributions = async (req, res, next) => {
 
 const getAllDistributions = async (req, res, next) => {
   try {
-    const distributions = await Distribution.find()
+    const { page, limit, skip } = getPagination(req.query);
+    const [distributions, total] = await Promise.all([
+      Distribution.find()
       .populate(
         'driveId',
         'title category location status'
@@ -380,10 +393,15 @@ const getAllDistributions = async (req, res, next) => {
         'recordedBy',
         'fullName email'
       )
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+      Distribution.countDocuments(),
+    ]);
 
     return res.json({
       distributions,
+      pagination: getPaginationMeta({ page, limit, total }),
     });
   } catch (error) {
     console.error(

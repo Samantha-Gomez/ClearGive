@@ -1,6 +1,4 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-const TOKEN_KEY = 'cleargive_token'
-
 export class ApiError extends Error {
   constructor(message, status, details = null) {
     super(message)
@@ -9,12 +7,6 @@ export class ApiError extends Error {
     this.details = details
   }
 }
-
-export const getStoredToken = () => window.localStorage.getItem(TOKEN_KEY)
-
-export const storeToken = (token) => window.localStorage.setItem(TOKEN_KEY, token)
-
-export const clearStoredToken = () => window.localStorage.removeItem(TOKEN_KEY)
 
 const notifyAdminAuthorizationFailure = (path, status) => {
   const isAdminEndpoint = String(path)
@@ -29,7 +21,6 @@ const notifyAdminAuthorizationFailure = (path, status) => {
 
 export async function apiRequest(path, options = {}) {
   const { body, headers = {}, ...requestOptions } = options
-  const token = getStoredToken()
   const requestHeaders = { ...headers }
   const isFormData =
     typeof FormData !== 'undefined' && body instanceof FormData
@@ -37,12 +28,12 @@ export async function apiRequest(path, options = {}) {
   if (body !== undefined && !isFormData) {
     requestHeaders['Content-Type'] = 'application/json'
   }
-  if (token) requestHeaders.Authorization = `Bearer ${token}`
 
   let response
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...requestOptions,
+      credentials: 'include',
       headers: requestHeaders,
       body:
         body === undefined
@@ -72,14 +63,11 @@ export async function apiRequest(path, options = {}) {
 }
 
 export async function apiBlobRequest(path) {
-  const token = getStoredToken()
-  const headers = token
-    ? { Authorization: `Bearer ${token}` }
-    : {}
+  const headers = {}
 
   let response
   try {
-    response = await fetch(`${API_URL}${path}`, { headers })
+    response = await fetch(`${API_URL}${path}`, { headers, credentials: 'include' })
   } catch {
     throw new ApiError('Unable to connect to the ClearGive server.', 0)
   }
@@ -100,13 +88,11 @@ export async function apiBlobRequest(path) {
 }
 
 export async function apiDownloadRequest(path) {
-  const token = getStoredToken()
   const headers = { Accept: 'text/csv' }
-  if (token) headers.Authorization = `Bearer ${token}`
 
   let response
   try {
-    response = await fetch(`${API_URL}${path}`, { headers })
+    response = await fetch(`${API_URL}${path}`, { headers, credentials: 'include' })
   } catch {
     throw new ApiError('Unable to connect to the ClearGive server.', 0)
   }
@@ -144,4 +130,3 @@ export async function apiDownloadRequest(path) {
   }
 }
 
-export { TOKEN_KEY }

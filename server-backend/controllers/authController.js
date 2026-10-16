@@ -2,6 +2,10 @@ const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Donation = require('../models/Donation');
+const PartnerVerification = require('../models/PartnerVerification');
+const Notification = require('../models/Notification');
+const { removeVerificationFile } = require('../utils/verificationDocumentStorage');
 const { logActivity } = require('../utils/activityLogger');
 const {
   sendEmailVerificationOtp,
@@ -11,6 +15,37 @@ const {
 const emailVerificationLifetimeMs = 10 * 60 * 1000;
 const passwordResetLifetimeMs = 10 * 60 * 1000;
 const publicRegistrationRoles = ['donor', 'partner'];
+const sessionCookieName = 'cleargive_session';
+
+const getSessionCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return [
+    `${sessionCookieName}=`,
+    'HttpOnly',
+    'Path=/',
+    `SameSite=${isProduction ? 'None' : 'Lax'}`,
+    ...(isProduction ? ['Secure'] : []),
+  ];
+};
+
+const setSessionCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const maxAge = Number.parseInt(process.env.SESSION_MAX_AGE_MS, 10) || 3600000;
+  const cookie = [
+    `${sessionCookieName}=${encodeURIComponent(token)}`,
+    'HttpOnly',
+    'Path=/',
+    `Max-Age=${Math.floor(maxAge / 1000)}`,
+    `SameSite=${isProduction ? 'None' : 'Lax'}`,
+    ...(isProduction ? ['Secure'] : []),
+  ].join('; ');
+
+  res.append('Set-Cookie', cookie);
+};
+
+const clearSessionCookie = (res) => {
+  res.append('Set-Cookie', getSessionCookieOptions().concat('Max-Age=0').join('; '));
+};
 
 const generateEmailOtp = () =>
   crypto.randomInt(100000, 1000000).toString();
@@ -45,6 +80,7 @@ const registerUser = async (req, res, next) => {
       contactNumber,
       password,
       role,
+      privacyConsent,
       organizationName,
       organizationType,
     } = req.body;
@@ -72,6 +108,7 @@ const registerUser = async (req, res, next) => {
       contactNumber,
       password,
       role,
+      privacyConsentAt: privacyConsent ? new Date() : null,
       emailVerified: false,
       emailVerificationOtpHash: otpHash,
       emailVerificationOtpExpiresAt: new Date(
@@ -110,6 +147,7 @@ const registerUser = async (req, res, next) => {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
+        contactNumber: user.contactNumber,
         role: user.role,
       },
     });
@@ -175,19 +213,26 @@ const loginUser = async (req, res, next) => {
       result: 'success',
     });
 
+    setSessionCookie(res, token);
+
     return res.json({
       message: 'Login successful.',
-      token,
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
+        contactNumber: user.contactNumber,
         role: user.role,
       },
     });
   } catch (error) {
     return next(error);
   }
+};
+
+const logoutUser = (req, res) => {
+  clearSessionCookie(res);
+  return res.json({ message: 'Logged out successfully.' });
 };
 
 const forgotPassword = async (req, res, next) => {
@@ -452,9 +497,105 @@ const getCurrentUser = async (req, res, next) => {
         id: req.user._id,
         fullName: req.user.fullName,
         email: req.user.email,
+        contactNumber: req.user.contactNumber,
         role: req.user.role,
         status: req.user.status,
       },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    if (!currentPassword || typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) return res.status(400).json({ message: 'Current password and a new password of 8 to 128 characters are required.' });
+    if (newPassword !== confirmPassword) return res.status(400).json({ message: 'New password and confirmation do not match.' });
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user || !(await user.comparePassword(currentPassword))) return res.status(401).json({ message: 'Current password is incorrect.' });
+    if (await user.comparePassword(newPassword)) return res.status(400).json({ message: 'New password must be different from the current password.' });
+    user.password = newPassword;
+    await user.save();
+    await logActivity({ user: user._id, role: user.role, action: 'password_changed', resourceType: 'User', resourceId: user._id.toString(), details: 'User changed their password from Settings.' });
+    return res.json({ message: 'Password changed successfully.' });
+  } catch (error) { return next(error); }
+};
+
+const anonymizeAccount = async (req, res, next) => {
+  try {
+    const { currentPassword } = req.body || {};
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user || !(await user.comparePassword(currentPassword))) {
+      return res.status(401).json({
+        message: 'Current password is incorrect.',
+      });
+    }
+
+    const userId = user._id;
+    const now = new Date();
+    const anonymousName = 'Deleted User';
+    const anonymousEmail = `deleted-${userId}@anonymized.invalid`;
+
+    const verification = await PartnerVerification.findOne({ user: userId });
+    if (verification) {
+      const documentFields = [
+        'registrationCertificate',
+        'supportingOrganizationDocument',
+        'representativeGovernmentId',
+      ];
+
+      for (const field of documentFields) {
+        const document = verification[field];
+        if (document?.storageKey) {
+          await removeVerificationFile(document);
+        }
+      }
+
+      await PartnerVerification.deleteOne({ _id: verification._id });
+    }
+
+    await Promise.all([
+      Donation.updateMany(
+        { donorId: userId },
+        { $set: { contributorName: anonymousName } },
+      ),
+      Notification.deleteMany({ recipient: userId }),
+    ]);
+
+    user.fullName = anonymousName;
+    user.email = anonymousEmail;
+    user.contactNumber = '0000000';
+    user.password = require('node:crypto').randomBytes(32).toString('hex');
+    user.status = 'suspended';
+    user.emailVerified = false;
+    user.privacyConsentAt = null;
+    user.anonymizedAt = now;
+    user.organizationName = undefined;
+    user.organizationType = undefined;
+    user.isApproved = false;
+    user.verificationStatus = user.role === 'partner' ? 'not_submitted' : undefined;
+    user.emailVerificationOtpHash = undefined;
+    user.emailVerificationOtpExpiresAt = undefined;
+    user.passwordResetOtpHash = undefined;
+    user.passwordResetOtpExpiresAt = undefined;
+    user.lastLoginAt = null;
+    user.passwordChangedAt = now;
+    await user.save();
+
+    await logActivity({
+      user: userId,
+      role: user.role,
+      action: 'account_anonymized',
+      resourceType: 'User',
+      resourceId: userId.toString(),
+      details: 'User account was anonymized at the user’s request.',
+      result: 'success',
+    });
+
+    return res.json({
+      message: 'Your account has been anonymized and access has been closed.',
     });
   } catch (error) {
     return next(error);
@@ -469,4 +610,7 @@ module.exports = {
   verifyEmail,
   resendEmailVerification,
   getCurrentUser,
+  changePassword,
+  anonymizeAccount,
+  logoutUser,
 };

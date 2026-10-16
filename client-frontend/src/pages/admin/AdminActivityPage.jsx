@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { apiRequest } from '../../services/api'
+import Pagination from '../../components/Pagination'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -20,8 +21,9 @@ export default function AdminActivityPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [sortOrder, setSortOrder] = useState('newest')
+  const [pagination, setPagination] = useState(null)
 
-  const fetchActivities = useCallback(async (isRefresh = false) => {
+  const fetchActivities = useCallback(async (isRefresh = false, requestedPage = 1) => {
     if (isRefresh) {
       setRefreshing(true)
     }
@@ -29,8 +31,9 @@ export default function AdminActivityPage() {
     setError('')
 
     try {
-      const data = await apiRequest('/activity/admin')
+      const data = await apiRequest(`/activity/admin?page=${requestedPage}&limit=20`)
       setActivities(data.activities || [])
+      setPagination(data.pagination || null)
     } catch (err) {
       setError(err.message || 'Unable to load activity logs.')
     } finally {
@@ -63,6 +66,22 @@ export default function AdminActivityPage() {
     return sorted
   }, [activities, sortOrder])
 
+  const exportActivities = () => {
+    const headers = ['Action', 'User', 'Role', 'Resource', 'Details', 'Result', 'Date']
+    const rows = sortedActivities.map((activity) => [
+      activity.action || '', activity.user?.fullName || activity.user?.email || 'System',
+      activity.role || '', activity.resourceType || '', activity.details || '',
+      activity.result || 'success', formatDate(activity.timestamp || activity.createdAt),
+    ])
+    const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `cleargive-activity-logs-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -87,6 +106,9 @@ export default function AdminActivityPage() {
             className={refreshing ? 'spin' : ''}
           />
           {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+        <button type="button" className="primary-button" onClick={exportActivities} disabled={!activities.length}>
+          Export CSV
         </button>
       </div>
 
@@ -203,6 +225,10 @@ export default function AdminActivityPage() {
           </div>
         </div>
       )}
+      <Pagination
+        pagination={pagination}
+        onPageChange={(nextPage) => fetchActivities(false, nextPage)}
+      />
     </div>
   )
 }

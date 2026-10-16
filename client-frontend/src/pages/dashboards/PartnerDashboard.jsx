@@ -3,13 +3,10 @@ import {
   Activity,
   CheckCircle2,
   ExternalLink,
-  FilePlus2,
   History,
   LoaderCircle,
-  LogOut,
   Package,
   RefreshCw,
-  Settings,
   ShieldCheck,
   Store,
   Users,
@@ -17,7 +14,6 @@ import {
 import { Link } from 'react-router-dom'
 import DashboardStat from '../../components/dashboard/DashboardStat'
 import UnavailablePanel from '../../components/dashboard/UnavailablePanel'
-import { useAuth } from '../../context/useAuth'
 import { ApiError, apiRequest } from '../../services/api'
 
 function formatDate(value) {
@@ -96,8 +92,6 @@ function buildActivity(
 }
 
 export default function PartnerDashboard() {
-  const { logout } = useAuth()
-
   const [dashboard, setDashboard] = useState({
     verification: null,
     drives: [],

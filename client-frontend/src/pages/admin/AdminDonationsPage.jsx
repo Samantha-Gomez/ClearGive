@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
+import Pagination from '../../components/Pagination'
 
 const statuses = [
   'All Statuses',
@@ -22,8 +23,9 @@ export default function AdminDonationsPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('All Statuses')
+  const [pagination, setPagination] = useState(null)
 
-  const loadDonations = useCallback(async (isRefresh = false) => {
+  const loadDonations = useCallback(async (isRefresh = false, requestedPage = 1) => {
     if (isRefresh) {
       setRefreshing(true)
     }
@@ -31,8 +33,9 @@ export default function AdminDonationsPage() {
     setError('')
 
     try {
-      const data = await apiRequest('/donations/admin')
+      const data = await apiRequest(`/donations/admin?page=${requestedPage}&limit=20`)
       setDonations(data.donations || data || [])
+      setPagination(data.pagination || null)
     } catch (err) {
       setError(err.message || 'Unable to load donation records.')
     } finally {
@@ -240,6 +243,10 @@ export default function AdminDonationsPage() {
           </div>
         </section>
       )}
+      <Pagination
+        pagination={pagination}
+        onPageChange={(nextPage) => loadDonations(false, nextPage)}
+      />
     </div>
   )
 }

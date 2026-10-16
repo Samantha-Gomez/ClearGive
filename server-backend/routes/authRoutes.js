@@ -7,6 +7,9 @@ const {
 	verifyEmail,
 	resendEmailVerification,
 	getCurrentUser,
+	changePassword,
+	anonymizeAccount,
+	logoutUser,
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 const {
@@ -14,6 +17,7 @@ const {
 	validateLogin,
 	validateForgotPassword,
 	validatePasswordReset,
+	validateAccountDeletion,
 	validateEmailVerification,
 	validateEmailVerificationResend,
 } = require('../middleware/validation');
@@ -26,6 +30,7 @@ const router = express.Router();
 
 router.post('/register', authLimiter, validateRegistration, registerUser);
 router.post('/login', authLimiter, validateLogin, loginUser);
+router.post('/logout', logoutUser);
 router.post(
 	'/forgot-password',
 	authLimiter,
@@ -48,5 +53,12 @@ router.post(
 	resendEmailVerification,
 );
 router.get('/me', authenticate, getCurrentUser);
+router.patch('/change-password', authenticate, changePassword);
+router.delete(
+	'/me',
+	authenticate,
+	validateAccountDeletion,
+	anonymizeAccount,
+);
 
 module.exports = router;

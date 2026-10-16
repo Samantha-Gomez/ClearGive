@@ -7,6 +7,8 @@ const {
   createNotification,
   createNotifications,
 } = require('../utils/notificationService');
+const { expirePastDonationDrives } = require('../utils/expireDonationDrives');
+const { getPagination, getPaginationMeta } = require('../utils/pagination');
 
 const donationFields = [
   'donorId',
@@ -112,6 +114,8 @@ const recordDonation = async (req, res, next) => {
       });
     }
 
+    await expirePastDonationDrives({ _id: req.params.driveId });
+
     const bodyError = validateDonationBody(
       req.body,
     );
@@ -181,6 +185,24 @@ const recordDonation = async (req, res, next) => {
       receivedAt: now,
       receivedBy: req.user._id,
     });
+
+    const receivedTotals = await Donation.aggregate([
+      { $match: { driveId: drive._id, status: { $in: ['Received', 'Distributed'] } } },
+      { $group: { _id: null, total: { $sum: '$quantity' } } },
+    ]);
+    const receivedQuantity = Number(receivedTotals[0]?.total || 0);
+    if (receivedQuantity >= Number(drive.targetQuantity || 0) && drive.status === 'active') {
+      drive.status = 'completed';
+      await drive.save();
+      await logActivity({
+        user: req.user._id,
+        role: req.user.role,
+        action: 'donation_drive_completed',
+        resourceType: 'DonationDrive',
+        resourceId: drive._id.toString(),
+        details: `Drive automatically completed after reaching ${receivedQuantity} received items.`,
+      });
+    }
 
     await logActivity({
       user: req.user._id,
@@ -426,19 +448,22 @@ const getMyDonations = async (
   next,
 ) => {
   try {
-    const donations = await Donation.find({
-      donorId: req.user._id,
-    })
+    const { page, limit, skip } = getPagination(req.query);
+    const filter = { donorId: req.user._id };
+    const [donations, total] = await Promise.all([Donation.find(filter)
       .populate(
         'driveId',
         'title category location status',
       )
       .sort({
         createdAt: -1,
-      });
+      })
+      .skip(skip)
+      .limit(limit), Donation.countDocuments(filter)]);
 
     return res.status(200).json({
       donations,
+      pagination: getPaginationMeta({ page, limit, total }),
     });
   } catch (error) {
     console.error(
@@ -459,7 +484,8 @@ const getAllDonations = async (
   next,
 ) => {
   try {
-    const donations = await Donation.find()
+    const { page, limit, skip } = getPagination(req.query);
+    const [donations, total] = await Promise.all([Donation.find()
       .populate(
         'donorId',
         'fullName email',
@@ -470,10 +496,13 @@ const getAllDonations = async (
       )
       .sort({
         createdAt: -1,
-      });
+      })
+      .skip(skip)
+      .limit(limit), Donation.countDocuments()]);
 
     return res.json({
       donations,
+      pagination: getPaginationMeta({ page, limit, total }),
     });
   } catch (error) {
     console.error(
