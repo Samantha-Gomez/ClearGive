@@ -32,7 +32,12 @@ const { expirePastDonationDrives } = require('./utils/expireDonationDrives');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const productionFrontendOrigin = 'https://clear-give-samantha24.vercel.app';
+
+// Render runs the service behind a reverse proxy and forwards the client IP.
+// Trust the first proxy so express-rate-limit can safely use that address.
+app.set('trust proxy', 1);
+
+const productionFrontendOrigin = 'https://clear-give-seven.vercel.app';
 const allowedOrigins = new Set([
   productionFrontendOrigin,
   ...(process.env.NODE_ENV === 'production'
