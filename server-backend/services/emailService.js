@@ -68,7 +68,14 @@ const sendEmail = async ({ to, subject, text, html }) => {
       text,
       html,
     });
-  } catch {
+  } catch (error) {
+    console.error('SMTP delivery failed.', {
+      message: error.message,
+      code: error.code,
+      responseCode: error.responseCode,
+      response: error.response,
+      command: error.command,
+    });
     throw new Error('Email delivery failed. Check SMTP availability and configuration.');
   }
 };
