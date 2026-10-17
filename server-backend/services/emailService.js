@@ -28,9 +28,61 @@ const isDevelopmentEmailLoggingEnabled = () =>
   process.env.NODE_ENV !== 'production' &&
   process.env.EMAIL_DEV_LOG === 'true';
 
+const sendEmailWithResendApi = async ({ apiKey, to, subject, text, html }) => {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM?.trim(),
+      to,
+      subject,
+      text,
+      html,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(
+      data.message || `Resend API request failed with status ${response.status}.`,
+    );
+    error.code = 'RESEND_API_ERROR';
+    error.responseCode = response.status;
+    throw error;
+  }
+
+  return data;
+};
+
 const sendEmail = async ({ to, subject, text, html }) => {
   if (!to || !subject || (!text && !html)) {
     throw new Error('Email recipient, subject, and message content are required.');
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+
+  if (resendApiKey) {
+    try {
+      return await sendEmailWithResendApi({
+        apiKey: resendApiKey,
+        to,
+        subject,
+        text,
+        html,
+      });
+    } catch (error) {
+      console.error('Resend API delivery failed.', {
+        message: error.message,
+        code: error.code,
+        responseCode: error.responseCode,
+      });
+      throw new Error('Email delivery failed. Check Resend configuration.');
+    }
   }
 
   const smtpConfiguration = getSmtpConfiguration();
