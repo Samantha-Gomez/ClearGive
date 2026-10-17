@@ -3,7 +3,7 @@ const Donation = require('../models/Donation');
 const Distribution = require('../models/Distribution');
 const { expirePastDonationDrives } = require('../utils/expireDonationDrives');
 
-const getAdminAnalytics = async (req, res, next) => {
+  const getAdminAnalytics = async (req, res, next) => {
   try {
     await expirePastDonationDrives();
 
