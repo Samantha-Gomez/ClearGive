@@ -98,9 +98,17 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: '',
+  })
+  const [appliedDateRange, setAppliedDateRange] = useState({
+    startDate: '',
+    endDate: '',
+  })
 
   const fetchAnalytics = useCallback(
-    async (isRefresh = false) => {
+    async (range = {}, isRefresh = false) => {
       if (isRefresh) {
         setRefreshing(true)
       } else {
@@ -110,7 +118,20 @@ export default function AdminAnalyticsPage() {
       setError('')
 
       try {
-        const data = await apiRequest('/analytics/admin')
+        const params = new URLSearchParams()
+
+        if (range.startDate) {
+          params.set('startDate', range.startDate)
+        }
+
+        if (range.endDate) {
+          params.set('endDate', range.endDate)
+        }
+
+        const query = params.toString()
+        const data = await apiRequest(
+          `/analytics/admin${query ? `?${query}` : ''}`,
+        )
         setAnalytics(data)
       } catch (requestError) {
         setError(
@@ -126,8 +147,41 @@ export default function AdminAnalyticsPage() {
   )
 
   useEffect(() => {
-    fetchAnalytics()
+    fetchAnalytics({})
   }, [fetchAnalytics])
+
+  const handleDateChange = (event) => {
+    const { name, value } = event.target
+
+    setDateRange((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  const handleApplyDateRange = async (event) => {
+    event.preventDefault()
+
+    if (
+      dateRange.startDate &&
+      dateRange.endDate &&
+      dateRange.startDate > dateRange.endDate
+    ) {
+      setError('The start date cannot be later than the end date.')
+      return
+    }
+
+    setAppliedDateRange(dateRange)
+    await fetchAnalytics(dateRange)
+  }
+
+  const handleClearDateRange = async () => {
+    const emptyRange = { startDate: '', endDate: '' }
+
+    setDateRange(emptyRange)
+    setAppliedDateRange(emptyRange)
+    await fetchAnalytics(emptyRange)
+  }
 
   if (loading) {
     return (
@@ -158,7 +212,7 @@ export default function AdminAnalyticsPage() {
           <button
             type="button"
             className="secondary-button"
-            onClick={() => fetchAnalytics(true)}
+            onClick={() => fetchAnalytics(appliedDateRange, true)}
             disabled={refreshing}
           >
             <RefreshCw
@@ -258,7 +312,7 @@ export default function AdminAnalyticsPage() {
         <button
           type="button"
           className="secondary-button"
-          onClick={() => fetchAnalytics(true)}
+          onClick={() => fetchAnalytics(appliedDateRange, true)}
           disabled={refreshing}
         >
           <RefreshCw
@@ -282,6 +336,70 @@ export default function AdminAnalyticsPage() {
           {error}
         </div>
       )}
+
+      <form
+        className="analytics-date-filter"
+        onSubmit={handleApplyDateRange}
+      >
+        <div className="analytics-date-filter-heading">
+          <div>
+            <h2>Filter by date</h2>
+            <p>
+              Limit all analytics to records created within a selected period.
+            </p>
+          </div>
+
+          {(appliedDateRange.startDate || appliedDateRange.endDate) && (
+            <span className="analytics-filter-status">
+              Active period
+            </span>
+          )}
+        </div>
+
+        <div className="analytics-date-filter-controls">
+          <label>
+            <span>Start date</span>
+            <input
+              type="date"
+              name="startDate"
+              value={dateRange.startDate}
+              max={dateRange.endDate || undefined}
+              onChange={handleDateChange}
+            />
+          </label>
+
+          <label>
+            <span>End date</span>
+            <input
+              type="date"
+              name="endDate"
+              value={dateRange.endDate}
+              min={dateRange.startDate || undefined}
+              onChange={handleDateChange}
+            />
+          </label>
+
+          <div className="analytics-date-filter-actions">
+            <button type="submit" className="primary-button">
+              Apply filter
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleClearDateRange}
+              disabled={
+                !dateRange.startDate &&
+                !dateRange.endDate &&
+                !appliedDateRange.startDate &&
+                !appliedDateRange.endDate
+              }
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </form>
 
       {/* SUMMARY NUMBERS */}
 

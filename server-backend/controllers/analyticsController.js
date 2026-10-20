@@ -3,28 +3,72 @@ const Donation = require('../models/Donation');
 const Distribution = require('../models/Distribution');
 const { expirePastDonationDrives } = require('../utils/expireDonationDrives');
 
-  const getAdminAnalytics = async (req, res, next) => {
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseDateBoundary = (value, endOfDay = false) => {
+  if (!value) return null;
+
+  if (!DATE_PATTERN.test(value)) return undefined;
+
+  const suffix = endOfDay
+    ? 'T23:59:59.999Z'
+    : 'T00:00:00.000Z';
+  const date = new Date(`${value}${suffix}`);
+
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  // Prevent values such as 2026-02-31 from rolling into another month.
+  if (date.toISOString().slice(0, 10) !== value) return undefined;
+
+  return date;
+};
+
+const getAdminAnalytics = async (req, res, next) => {
   try {
     await expirePastDonationDrives();
+
+    const startDate = parseDateBoundary(req.query.startDate);
+    const endDate = parseDateBoundary(req.query.endDate, true);
+
+    if (startDate === undefined || endDate === undefined) {
+      return res.status(400).json({
+        message: 'Dates must use the YYYY-MM-DD format.',
+      });
+    }
+
+    if (startDate && endDate && startDate > endDate) {
+      return res.status(400).json({
+        message: 'The start date cannot be later than the end date.',
+      });
+    }
+
+    const dateFilter = {};
+
+    if (startDate) dateFilter.$gte = startDate;
+    if (endDate) dateFilter.$lte = endDate;
+
+    const recordFilter = Object.keys(dateFilter).length > 0
+      ? { createdAt: dateFilter }
+      : {};
 
     const [
       drives,
       donations,
       distributions,
     ] = await Promise.all([
-      DonationDrive.find()
+      DonationDrive.find(recordFilter)
         .select(
           'title category status targetQuantity createdAt',
         )
         .sort({ createdAt: 1 }),
 
-      Donation.find()
+      Donation.find(recordFilter)
         .select(
           'driveId quantity status createdAt receivedAt distributedAt',
         )
         .sort({ createdAt: 1 }),
 
-      Distribution.find()
+      Distribution.find(recordFilter)
         .select(
           'driveId quantityDistributed beneficiariesAssisted createdAt',
         )
@@ -309,6 +353,11 @@ const { expirePastDonationDrives } = require('../utils/expireDonationDrives');
     });
 
     return res.json({
+      filters: {
+        startDate: req.query.startDate || null,
+        endDate: req.query.endDate || null,
+      },
+
       summary: {
         totalDrives,
         activeDrives,

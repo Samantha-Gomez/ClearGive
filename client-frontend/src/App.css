@@ -733,13 +733,66 @@ button {
 
 .drive-list,
 .drives-list,
-.drive-grid,
-.drives-grid,
 .verification-list,
 .request-list {
   display: flex;
   gap: 13px;
   align-items: center;
+}
+
+.drive-grid,
+.drives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: stretch;
+  gap: 20px;
+}
+
+.filter-card {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filter-search svg {
+  position: absolute;
+  left: 13px;
+  z-index: 1;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.filter-search input {
+  min-height: 44px;
+  padding-left: 42px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.filter-row .form-group {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.filter-row .form-group label {
+  display: block;
+  margin: 0;
 }
 
 .dashboard-stat > div { min-width: 0; }
@@ -759,6 +812,13 @@ button {
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s ease;
+}
+
+.drive-grid .drive-card,
+.drives-grid .drives-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
 }
 
 .drive-card:hover,
@@ -799,6 +859,51 @@ button {
 .drive-list-item p,
 .drive-item p {
   line-height: 1.55;
+}
+
+.drive-description {
+  margin: 10px 0 14px;
+  color: var(--muted);
+}
+
+.drive-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.drive-location svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--green);
+}
+
+.drive-progress {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.drive-progress-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.drive-progress-label strong {
+  flex: 0 0 auto;
+  color: var(--ink);
+}
+
+.drive-progress .progress-track {
+  height: 8px;
+  margin-top: 9px;
 }
 
 .drive-card-meta,
@@ -950,6 +1055,14 @@ button {
 }
 
 @media (max-width: 480px) {
+  .filter-card {
+    padding: 16px;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
   .drive-card-footer {
     align-items: flex-start;
     flex-direction: column;
@@ -1513,10 +1626,41 @@ a:focus-visible {
   display: block;
 }
 
+.form-message-success {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: min(430px, calc(100vw - 32px));
+  margin: 0;
+  padding: 15px 17px;
+  border: 1px solid var(--green);
+  border-left-width: 5px;
+  border-radius: 12px;
+  color: var(--green-dark);
+  background: var(--green-soft);
+  box-shadow: 0 14px 32px rgba(20, 74, 43, 0.22);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.45;
+  animation: validation-popup-in 0.2s ease-out;
+}
+
+.form-message-success svg {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: var(--green);
+}
+
 @media (max-width: 620px) {
   .form-error,
   .form-message-error,
-  .page-state-error {
+  .page-state-error,
+  .form-message-success {
     top: 16px;
     right: 16px;
     width: calc(100vw - 32px);
@@ -3155,6 +3299,76 @@ a:focus-visible {
   gap: 24px;
 }
 
+.analytics-date-filter {
+  display: grid;
+  gap: 18px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 16px);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-date-filter-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.analytics-date-filter-heading h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.analytics-date-filter-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.analytics-filter-status {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--green-dark);
+  background: var(--green-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.analytics-date-filter-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.analytics-date-filter-controls label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.analytics-date-filter-controls input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--input-bg);
+}
+
+.analytics-date-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .analytics-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3322,6 +3536,14 @@ a:focus-visible {
 }
 
 @media (max-width: 900px) {
+  .analytics-date-filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-date-filter-actions {
+    grid-column: 1 / -1;
+  }
+
   .analytics-monthly-card {
     grid-column: span 1;
   }
@@ -3332,6 +3554,26 @@ a:focus-visible {
 }
 
 @media (max-width: 560px) {
+  .analytics-date-filter {
+    padding: 18px;
+  }
+
+  .analytics-date-filter-heading {
+    display: grid;
+  }
+
+  .analytics-date-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-date-filter-actions {
+    grid-column: auto;
+  }
+
+  .analytics-date-filter-actions button {
+    flex: 1;
+  }
+
   .analytics-stats {
     grid-template-columns: 1fr;
   }
@@ -3785,5 +4027,67 @@ a:focus-visible {
 
   .notification-list {
     max-height: min(60vh, 420px);
+  }
+}
+
+/* =========================================================
+   GLOBAL FEEDBACK POPUPS
+   Keep success and error feedback consistent on every page.
+   ========================================================= */
+
+.form-success,
+.success-message,
+.form-message-success {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: min(430px, calc(100vw - 32px));
+  margin: 0;
+  padding: 15px 17px;
+  border: 1px solid var(--green);
+  border-left-width: 5px;
+  border-radius: 12px;
+  color: var(--green-dark);
+  background: var(--green-soft);
+  box-shadow: 0 14px 32px rgba(20, 74, 43, 0.22);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.45;
+  text-align: left;
+  animation: validation-popup-in 0.2s ease-out;
+}
+
+.form-success svg,
+.success-message svg,
+.form-message-success svg {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: var(--green);
+}
+
+.form-error,
+.form-message-error,
+.page-state-error,
+.validation-popup-error {
+  z-index: 1100;
+  border-left-width: 5px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: left;
+}
+
+@media (max-width: 620px) {
+  .form-success,
+  .success-message,
+  .form-message-success {
+    top: 16px;
+    right: 16px;
+    width: calc(100vw - 32px);
   }
 }

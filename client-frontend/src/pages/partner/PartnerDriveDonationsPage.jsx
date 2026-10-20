@@ -77,6 +77,16 @@ export default function PartnerDriveDonationsPage() {
     loadData()
   }, [loadData])
 
+  useEffect(() => {
+    if (!success) return undefined
+
+    const timer = window.setTimeout(() => {
+      setSuccess('')
+    }, 5000)
+
+    return () => window.clearTimeout(timer)
+  }, [success])
+
   const handleSearchDonors = async (
     event,
   ) => {
