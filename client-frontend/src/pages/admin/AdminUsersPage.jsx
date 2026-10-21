@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search name, email, or organization..."
+            placeholder="Search name or organization..."
             aria-label="Search users"
           />
         </div>
@@ -168,7 +168,6 @@ export default function AdminUsersPage() {
                     <tr key={user._id}>
                       <td>
                         <strong>{user.fullName}</strong>
-                        <small>{user.email}</small>
                         {user.organizationName && <small>{user.organizationName}</small>}
                       </td>
                       <td>{user.role}</td>

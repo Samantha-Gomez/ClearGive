@@ -8,6 +8,10 @@ const Notification = require('../models/Notification');
 const { removeVerificationFile } = require('../utils/verificationDocumentStorage');
 const { logActivity } = require('../utils/activityLogger');
 const {
+  isValidPassword,
+  passwordRequirementsMessage,
+} = require('../middleware/validation');
+const {
   sendEmailVerificationOtp,
   sendPasswordResetOtp,
 } = require('../services/emailService');
@@ -510,7 +514,7 @@ const getCurrentUser = async (req, res, next) => {
 const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body || {};
-    if (!currentPassword || typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) return res.status(400).json({ message: 'Current password and a new password of 8 to 128 characters are required.' });
+    if (!currentPassword || !isValidPassword(newPassword)) return res.status(400).json({ message: `Current password and a new password are required. ${passwordRequirementsMessage}` });
     if (newPassword !== confirmPassword) return res.status(400).json({ message: 'New password and confirmation do not match.' });
     const user = await User.findById(req.user._id).select('+password');
     if (!user || !(await user.comparePassword(currentPassword))) return res.status(401).json({ message: 'Current password is incorrect.' });

@@ -57,14 +57,12 @@ export default function AdminDonationsPage() {
         donation.donorId?.name ||
         ''
 
-      const donorEmail = donation.donorId?.email || ''
       const driveTitle = donation.driveId?.title || ''
       const item = donation.item || ''
 
       const matchesSearch =
         !searchValue ||
         donorName.toLowerCase().includes(searchValue) ||
-        donorEmail.toLowerCase().includes(searchValue) ||
         driveTitle.toLowerCase().includes(searchValue) ||
         item.toLowerCase().includes(searchValue)
 
@@ -190,11 +188,6 @@ export default function AdminDonationsPage() {
                             'Donor'}
                         </strong>
 
-                        {donation.donorId?.email && (
-                          <small>
-                            {donation.donorId.email}
-                          </small>
-                        )}
                       </div>
                     </td>
 

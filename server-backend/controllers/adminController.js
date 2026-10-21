@@ -41,14 +41,13 @@ const listAdminUsers = async (req, res, next) => {
       const searchRegex = new RegExp(escapedSearch, 'i');
       filter.$or = [
         { fullName: searchRegex },
-        { email: searchRegex },
         { organizationName: searchRegex },
       ];
     }
 
     const [users, total] = await Promise.all([
       User.find(filter)
-        .select('fullName email contactNumber role status emailVerified organizationName verificationStatus createdAt lastLoginAt anonymizedAt')
+        .select('fullName role status emailVerified organizationName verificationStatus createdAt lastLoginAt anonymizedAt')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -103,7 +102,6 @@ const updateAdminUserStatus = async (req, res, next) => {
       user: {
         id: user._id,
         fullName: user.fullName,
-        email: user.email,
         role: user.role,
         status: user.status,
       },

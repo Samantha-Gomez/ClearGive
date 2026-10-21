@@ -205,6 +205,9 @@ export default function ForgotPasswordPage() {
                 value={form.password}
                 onChange={updateField}
                 minLength="8"
+                maxLength="128"
+                pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}"
+                title="Use 8 to 128 characters with uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=)."
                 required
               />
 
@@ -217,6 +220,9 @@ export default function ForgotPasswordPage() {
                 value={form.confirmPassword}
                 onChange={updateField}
                 minLength="8"
+                maxLength="128"
+                pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}"
+                title="Use 8 to 128 characters with uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=)."
                 required
               />
 

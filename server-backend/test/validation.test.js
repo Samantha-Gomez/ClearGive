@@ -13,8 +13,8 @@ const validRegistration = () => ({
   fullName: 'Test Donor',
   email: 'donor@example.com',
   contactNumber: '09123456789',
-  password: 'password123',
-  confirmPassword: 'password123',
+  password: 'Password123!',
+  confirmPassword: 'Password123!',
   role: 'donor',
   privacyConsent: true,
 });
@@ -90,7 +90,7 @@ test('rejects public admin registration', () => {
 test('validates login credentials', () => {
   const result = runMiddleware(validateLogin, {
     email: 'USER@EXAMPLE.COM',
-    password: 'password123',
+    password: 'Password123!',
   });
 
   assert.equal(result.nextCalled, true);
@@ -100,8 +100,8 @@ test('rejects malformed password reset codes', () => {
   const result = runMiddleware(validatePasswordReset, {
     email: 'user@example.com',
     otp: '12345',
-    password: 'password123',
-    confirmPassword: 'password123',
+    password: 'Password123!',
+    confirmPassword: 'Password123!',
   });
 
   assert.equal(result.nextCalled, false);
@@ -126,11 +126,11 @@ test('validates MongoDB object IDs', () => {
 
 test('requires explicit confirmation to anonymize an account', () => {
   const invalid = runMiddleware(validateAccountDeletion, {
-    currentPassword: 'password123',
+    currentPassword: 'Password123!',
     confirmation: 'DELETE',
   });
   const valid = runMiddleware(validateAccountDeletion, {
-    currentPassword: 'password123',
+    currentPassword: 'Password123!',
     confirmation: 'DELETE MY ACCOUNT',
   });
 

@@ -3,6 +3,13 @@ const mongoose = require('mongoose');
 const isValidEmail = (value) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+const isValidPassword = (value) =>
+  typeof value === 'string' &&
+  /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}$/.test(value);
+
+const passwordRequirementsMessage =
+  'Password must be 8 to 128 characters and include uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=).';
+
 const partnerOrganizationTypes = [
   'NGO/non-profit',
   'school',
@@ -170,12 +177,11 @@ const validateRegistration = (req, res, next) => {
   if (
     !password ||
     typeof password !== 'string' ||
-    password.length < 8 ||
-    password.length > 128
+    !isValidPassword(password)
   ) {
     return sendValidationError(
       res,
-      'Password must be between 8 and 128 characters long.',
+      passwordRequirementsMessage,
     );
   }
 
@@ -310,12 +316,11 @@ const validatePasswordReset = (req, res, next) => {
 
   if (
     typeof password !== 'string' ||
-    password.length < 8 ||
-    password.length > 128
+    !isValidPassword(password)
   ) {
     return sendValidationError(
       res,
-      'Password must be between 8 and 128 characters long.',
+      passwordRequirementsMessage,
     );
   }
 
@@ -1317,6 +1322,8 @@ const validateRejectionRequest = (
 
 module.exports = {
   validateRegistration,
+  isValidPassword,
+  passwordRequirementsMessage,
   validateLogin,
   validateForgotPassword,
   validatePasswordReset,

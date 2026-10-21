@@ -105,8 +105,8 @@ export default function RegisterPage() {
             </select>
           </>}
           <div className="form-grid">
-            <div><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" value={form.password} onChange={updateField} minLength="8" maxLength="128" required /></div>
-            <div><label htmlFor="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={updateField} minLength="8" maxLength="128" required /></div>
+            <div><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" value={form.password} onChange={updateField} minLength="8" maxLength="128" pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}" title="Use 8 to 128 characters with uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=)." required /></div>
+            <div><label htmlFor="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={updateField} minLength="8" maxLength="128" pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}" title="Use 8 to 128 characters with uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=)." required /></div>
           </div>
           <label className="checkbox-label">
             <input

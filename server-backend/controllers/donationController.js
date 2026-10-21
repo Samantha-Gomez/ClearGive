@@ -488,7 +488,7 @@ const getAllDonations = async (
     const [donations, total] = await Promise.all([Donation.find()
       .populate(
         'donorId',
-        'fullName email',
+        'fullName',
       )
       .populate(
         'driveId',

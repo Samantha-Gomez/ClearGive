@@ -233,8 +233,8 @@ export default function SettingsPage({ role }) {
         </div>
         <form className="settings-password-form" onSubmit={changePassword}>
           <input aria-label="Current password" type="password" placeholder="Current password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} required />
-          <input aria-label="New password" type="password" placeholder="New password (8+ characters)" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} minLength={8} required />
-          <input aria-label="Confirm new password" type="password" placeholder="Confirm new password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} minLength={8} required />
+          <input aria-label="New password" type="password" placeholder="New password (8+ characters)" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} minLength={8} maxLength={128} pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}" title="Use 8 to 128 characters with uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=)." required />
+          <input aria-label="Confirm new password" type="password" placeholder="Confirm new password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} minLength={8} maxLength={128} pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*_+=-])[A-Za-z0-9!@#$%^&*_+=-]{8,128}" title="Use 8 to 128 characters with uppercase, lowercase, a number, and a special character (!@#$%^&*_+-=)." required />
           <button className="primary-button" type="submit" disabled={changingPassword}>{changingPassword ? 'Updating...' : 'Update password'}</button>
         </form>
         {passwordError && <div className="form-error" role="alert">{passwordError}</div>}

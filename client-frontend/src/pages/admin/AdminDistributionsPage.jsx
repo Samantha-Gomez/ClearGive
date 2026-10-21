@@ -52,8 +52,6 @@ export default function AdminDistributionsPage() {
         distribution.recordedBy?.fullName ||
         distribution.recordedBy?.name ||
         ''
-      const recorderEmail =
-        distribution.recordedBy?.email || ''
       const notes = distribution.notes || ''
 
       return (
@@ -61,7 +59,6 @@ export default function AdminDistributionsPage() {
         driveTitle.toLowerCase().includes(searchValue) ||
         item.toLowerCase().includes(searchValue) ||
         recorderName.toLowerCase().includes(searchValue) ||
-        recorderEmail.toLowerCase().includes(searchValue) ||
         notes.toLowerCase().includes(searchValue)
       )
     })
@@ -183,11 +180,6 @@ export default function AdminDistributionsPage() {
                             'Partner'}
                         </strong>
 
-                        {distribution.recordedBy?.email && (
-                          <small>
-                            {distribution.recordedBy.email}
-                          </small>
-                        )}
                       </div>
                     </td>
 

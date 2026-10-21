@@ -391,7 +391,7 @@ const getAllDistributions = async (req, res, next) => {
       )
       .populate(
         'recordedBy',
-        'fullName email'
+        'fullName'
       )
       .sort({ createdAt: -1 })
       .skip(skip)
