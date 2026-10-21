@@ -4082,6 +4082,16 @@ a:focus-visible {
   text-align: left;
 }
 
+.donor-search-result {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.donor-search-result-email {
+  color: var(--muted);
+}
+
 @media (max-width: 620px) {
   .form-success,
   .success-message,

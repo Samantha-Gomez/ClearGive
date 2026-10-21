@@ -389,7 +389,7 @@ export default function PartnerDriveDonationsPage() {
                     </strong>
 
                     {donor.email && (
-                      <span>
+                      <span className="donor-search-result-email">
                         {donor.email}
                       </span>
                     )}
